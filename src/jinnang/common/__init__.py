@@ -13,7 +13,7 @@ Modules:
 from .formatters import TruncatedPrettyPrinter, ResolutionPreset, Verbosity, get_numeric
 from .patterns import GenericSingletonFactory
 from .decorators import mock_when, fail_recover, custom_retry, BadInputException
-from .collections import list_to_tuple
+from .collections import list_to_tuple, get_unique_key
 
 # Export all classes
 __all__ = [
@@ -26,5 +26,6 @@ __all__ = [
     'custom_retry',
     'BadInputException',
     'list_to_tuple',
-    'get_numeric'
+    'get_numeric',
+    'get_unique_key'
 ]

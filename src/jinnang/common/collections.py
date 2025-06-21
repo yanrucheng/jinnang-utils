@@ -10,3 +10,22 @@ def get_first_value(d, keys, default=None):
         if val is not None and val != '':
             return val
     return default
+
+
+def get_unique_key(key, d):
+    """
+    Generate a unique key for a dictionary by appending a numeric suffix.
+
+    Args:
+    key (str): The original key.
+    d (dict): The dictionary in which the key needs to be unique.
+
+    Returns:
+    str: A unique key.
+    """
+    if key not in d:
+        return key
+    i = 1
+    while f"{key}-{i}" in d:
+        i += 1
+    return f"{key}-{i}"

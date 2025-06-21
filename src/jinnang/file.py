@@ -1,5 +1,16 @@
 import unicodedata
 
+import os
+
+def inplace_overwrite_meta(src: str, target: str):
+    # Get timestamps from the source file
+    stat_src = os.stat(src)
+    atime = stat_src.st_atime  # Access time
+    mtime = stat_src.st_mtime  # Modification time
+
+    # Apply timestamps to the destination file
+    os.utime(target, (atime, mtime))
+
 def is_bad_llm_caption(caption: str) -> bool:
     """
     Check if a caption contains too many question marks (more than 3)

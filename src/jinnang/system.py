@@ -2,6 +2,7 @@ import os
 import sys
 import contextlib
 from io import StringIO
+from typing import Optional
 
 @contextlib.contextmanager
 def suppress_c_stdout_stderr(suppress_stdout=True, suppress_stderr=False):
@@ -46,3 +47,70 @@ def suppress_stdout_stderr(suppress_stdout=True, suppress_stderr=False):
         yield
     finally:
         sys.stdout, sys.stderr = old_stdout, old_stderr
+
+
+def get_worker_num_for_io_bounded_task(user_defined: Optional[int] = None) -> int:
+    """Calculate optimal number of workers for IO-bound tasks"""
+    if user_defined is not None:
+        return max(1, min(user_defined, 32))  # Enforce reasonable bounds
+    try:
+        cpu_count = os.cpu_count() or 4
+        calculated = min(32, (cpu_count * 1))
+        return max(4, calculated)
+    except:
+        return 8
+
+def create_relative_symlink(target_path: str, link_folder: str):
+    """
+    Create a relative symbolic link inside 'link_folder' pointing to 'target_path'.
+    The name of the symbolic link will be the same as the name of the target.
+    Args:
+    target_path (str): The path to the target file or directory.
+    link_folder (str): The folder where the symbolic link will be created.
+    """
+    assert target_path and link_folder, \
+            f'Both target_path, link_folder are a must. got target_path={target_path}; link_folder={link_folder}'
+    target_path = os.path.abspath(target_path)
+    link_folder = os.path.abspath(link_folder)
+    os.makedirs(link_folder, exist_ok=True)
+    link_name = os.path.basename(target_path)
+    rel_path = os.path.relpath(target_path, link_folder)
+    link_path = os.path.join(link_folder, link_name)
+    try:
+        os.symlink(rel_path, link_path)
+    except Exception as e:
+        print(f"Fail to build symlink at {str(rel_path)} for {str(target_path)}. Details: {e}")
+
+def safe_delete(file_path):
+    if not os.path.isfile(file_path):
+        return
+    try:
+        os.remove(file_path)
+    except PermissionError as e:
+        raise PermissionError(f"Permission denied: {e}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+def safe_move(src: str, dst: str) -> bool:
+    try:
+        if not src or not dst:
+            raise ValueError(f'Both src and dst are required. Got src={src}, dst={dst}')
+        src_path = os.path.abspath(src)
+        dst_path = os.path.abspath(dst)
+        if not os.path.exists(src_path):
+            raise FileNotFoundError(f'Source file does not exist: {src_path}')
+        if not os.path.isfile(src_path):
+            raise ValueError(f'Source is not a file: {src_path}')
+        if os.path.isdir(dst_path):
+            dst_path = os.path.join(dst_path, os.path.basename(src_path))
+        os.makedirs(os.path.dirname(dst_path), exist_ok=True)
+        try:
+            os.rename(src_path, dst_path)
+        except OSError:
+            import shutil
+            shutil.copy2(src_path, dst_path)
+            os.remove(src_path)
+        return True
+    except Exception as e:
+        print(f"Failed to move file: {e}")
+        return False
