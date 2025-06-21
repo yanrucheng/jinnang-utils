@@ -7,7 +7,7 @@ import os
 from datetime import datetime
 from typing import TypeVar
 
-from ..hash import partial_file_hash
+from jinnang.hash import partial_file_hash
 
 T = TypeVar('T')
 

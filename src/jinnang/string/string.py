@@ -1,16 +1,7 @@
 
-import math
-import logging
-from .date import date_str_to_iso_date_str, timestamp_to_date
+import unicodedata
 from string import Formatter
 from typing import Optional
-
-
-
-# Import Verbosity from the verbosity module
-from .verbosity import Verbosity
-
-logger = logging.getLogger(__name__)
 
 
 def get_numeric(value):
@@ -20,14 +11,7 @@ def get_numeric(value):
     except (ValueError, TypeError):
         return None
 
-# LLM Token calculation
 
-def calculate_tokens(width: int, height: int) -> float:
-    """Calculate tokens as (h * w) / 784"""
-    return math.ceil((width * height) / 784)
-
-
-# Token calculation for LLM processing
 def safe_format(template: str, data: dict) -> str:
     """Safely format a string using only the keys present in the template.
     
@@ -47,11 +31,9 @@ def safe_format(template: str, data: dict) -> str:
     return template.format(**filtered_data)
 
 
-
-
-def get_int(value, default=0):
-    try:
-        return int(value) if value is not None else default
-    except (ValueError, TypeError):
-        return default
-
+def remove_special_chars(text: str) -> str:
+    """Remove characters with Unicode categories So, Cn, Co from a string."""
+    return ''.join(
+        char for char in text 
+        if unicodedata.category(char) not in {'So', 'Cn', 'Co'}
+    )

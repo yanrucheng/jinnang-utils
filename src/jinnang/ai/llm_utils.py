@@ -1,7 +1,13 @@
+import math
 from typing import Union, Dict, List
 import logging
 import re
 logger = logging.getLogger(__name__)
+
+def calculate_tokens(width: int, height: int) -> float:
+    """Calculate tokens as (h * w) / 784"""
+    return math.ceil((width * height) / 784)
+
 
 def is_bad_llm_caption(caption: Union[str, Dict]) -> bool:
     """
