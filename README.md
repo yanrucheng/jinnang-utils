@@ -189,6 +189,14 @@ from jinnang.ai import llm_utils
 # print(result)
 ```
 
+## Testing
+
+To run the tests, navigate to the root directory of the project and execute:
+
+```bash
+pytest -v
+```
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
