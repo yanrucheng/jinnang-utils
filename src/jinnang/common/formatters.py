@@ -157,3 +157,11 @@ class TruncatedPrettyPrinter(pprint.PrettyPrinter):
         
         # Use the parent class's formatting for other types
         return super()._format(obj, *args, **kwargs)
+
+
+def get_numeric(value):
+    """Convert value to float if possible, else return None."""
+    try:
+        return float(value) if value is not None else None
+    except (ValueError, TypeError):
+        return None

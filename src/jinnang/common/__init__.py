@@ -10,9 +10,10 @@ Modules:
 """
 
 # Import all classes for easy access
-from .formatters import TruncatedPrettyPrinter, ResolutionPreset, Verbosity
+from .formatters import TruncatedPrettyPrinter, ResolutionPreset, Verbosity, get_numeric
 from .patterns import GenericSingletonFactory
 from .decorators import mock_when, fail_recover, custom_retry, BadInputException
+from .collections import list_to_tuple
 
 # Export all classes
 __all__ = [
@@ -23,5 +24,7 @@ __all__ = [
     'mock_when',
     'fail_recover',
     'custom_retry',
-    'BadInputException'
+    'BadInputException',
+    'list_to_tuple',
+    'get_numeric'
 ]
