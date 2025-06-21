@@ -135,7 +135,7 @@ class SingletonFileLoader(Singleton):
         
         for directory in locations:
             potential_path = os.path.join(directory, filename)
-            if os.path.exists(potential_path):
+            if os.path.exists(potential_path) and os.path.isfile(potential_path):
                 return potential_path
                 
         raise FileNotFoundError(
