@@ -22,4 +22,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Formatting utilities: `calculate_tokens`, `safe_format`
 - Debug utilities: `get_python_execution_info`, `get_class_info`, `print_execution_info`, `print_class_info`
 - Arithmetic utilities: `get_mode`
-- Common patterns: `TruncatedPrettyPrinter`, `ResolutionPreset`, `Verbosity`, `mock_when`, `fail_recover`, `custom_retry`, `BadInputException`
+- Common patterns: `ResolutionPreset` (moved to media module), `Verbosity` (moved to separate file), `mock_when`, `fail_recover`, `custom_retry`, `BadInputException`
+- Removed: `TruncatedPrettyPrinter` (use Python's standard `pprint` module instead)

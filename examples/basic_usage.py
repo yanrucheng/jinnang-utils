@@ -7,7 +7,8 @@ This script demonstrates how to use various utilities provided by the jinnang pa
 
 # Import the jinnang package
 from jinnang import hash, file, system, formatting, debug, arithmetic
-from jinnang.common import TruncatedPrettyPrinter, ResolutionPreset, Verbosity
+from jinnang.common.verbosity import Verbosity
+from jinnang.media.resolution import ResolutionPreset
 
 # Example 1: Using hash utilities
 print("\n=== Hash Utilities ===\n")
@@ -80,9 +81,10 @@ complex_data = {
     },
 }
 
-# Use truncated pretty printer
-printer = TruncatedPrettyPrinter(max_width=40, verbosity=Verbosity.NORMAL)
-print("Truncated output:")
+# Use standard Python pretty printer
+import pprint
+printer = pprint.PrettyPrinter(max_width=40, compact=True)
+print("Pretty printed output:")
 printer.pprint(complex_data)
 
 print("\nDone!")

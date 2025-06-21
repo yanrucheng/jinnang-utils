@@ -5,20 +5,24 @@ This module provides reusable class definitions for the jinnang utility package.
 ## Modules
 
 - `patterns.py`: Design pattern implementations (Singleton, Factory, etc.)
-- `formatters.py`: Data formatting and display utilities
+- `formatting_utils.py`: General formatting utilities
+- `formatters.py`: Simple formatting utility functions
+- `verbosity.py`: Verbosity level enumeration
 
 ## Usage
 
 Classes can be imported directly from the jinnang.common module:
 
 ```python
-from jinnang.common import TruncatedPrettyPrinter, ResolutionPreset, Verbosity, GenericSingletonFactory
+from jinnang.common.verbosity import Verbosity
+from jinnang.common import GenericSingletonFactory
+from jinnang.media.resolution import ResolutionPreset
 ```
 
 Or from their specific modules:
 
 ```python
-from jinnang.common.formatters import TruncatedPrettyPrinter
+from jinnang.common.formatters import get_numeric
 from jinnang.common.patterns import GenericSingletonFactory
 ```
 
@@ -29,7 +33,9 @@ This directory contains reusable class definitions that provide common patterns 
 The common module is organized into logical files based on functionality:
 
 - **patterns.py**: Implementation of design patterns (Singleton, Factory, etc.)
-- **formatters.py**: Data formatting and display utilities
+- **formatting_utils.py**: General formatting utilities
+- **formatters.py**: Simple formatting utility functions
+- **verbosity.py**: Verbosity level enumeration
 
 ## Available Classes
 
@@ -61,24 +67,10 @@ same_manager = MyManager.get_instance()
 assert manager is same_manager  # True
 ```
 
-### TruncatedPrettyPrinter
+### ResolutionPreset (moved to media module)
 
 ```python
-from jinnang.common import TruncatedPrettyPrinter
-
-# Create a printer that shows 4 items at start/end of large collections
-printer = TruncatedPrettyPrinter(show_num=4)
-
-# Print a large list with truncation
-large_list = list(range(100))
-printer.pprint(large_list)
-# Output will show first 2 and last 2 items with count of omitted items
-```
-
-### ResolutionPreset
-
-```python
-from jinnang.common import ResolutionPreset
+from jinnang.media.resolution import ResolutionPreset
 
 # Compare resolutions
 if ResolutionPreset.RES_720P > ResolutionPreset.RES_480P:

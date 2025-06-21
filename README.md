@@ -25,6 +25,8 @@ src/
     │   ├── __init__.py
     │   ├── file.py
     │   └── system.py         # System-related functions
+    ├── media/                # Media-related utilities
+    │   └── resolution.py    # Video resolution presets
     ├── data/                 # Data manipulation, hashing, geo-utilities
     │   ├── __init__.py
     │   ├── hash.py
@@ -37,7 +39,9 @@ src/
     │   ├── collections.py
     │   ├── decorators.py
     │   ├── exceptions.py     # Custom exception classes
-    │   ├── formatters.py     # Specific formatters
+    │   ├── formatting_utils.py # General formatting utilities
+│   ├── formatters.py     # Simple formatting utility functions
+│   ├── verbosity.py      # Verbosity level enumeration
     │   ├── path.py
     │   └── patterns.py
     ├── ai/                   # AI-related functionalities (e.g., LLM utilities)
@@ -109,7 +113,8 @@ with system.suppress_c_stdout_stderr(suppress_stdout=True, suppress_stderr=False
 
 ```python
 from jinnang.core import arithmetic, formatting
-from jinnang.common.formatters import TruncatedPrettyPrinter, ResolutionPreset, Verbosity
+from jinnang.common.verbosity import Verbosity
+from jinnang.media.resolution import ResolutionPreset
 
 # Find the mode of a list
 mode = arithmetic.get_mode([1, 2, 2, 3, 3, 3, 4])
@@ -122,7 +127,9 @@ tokens = formatting.calculate_tokens(width=512, height=512)
 result = formatting.safe_format("Hello {name}", {"name": "World", "age": 30})
 
 # Use truncated pretty printer
-printer = TruncatedPrettyPrinter(max_width=80)
+# Use standard Python pretty printing
+import pprint
+printer = pprint.PrettyPrinter(max_width=80)
 printer.pprint(large_object)
 ```
 
