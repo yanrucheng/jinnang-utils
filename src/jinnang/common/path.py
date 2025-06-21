@@ -5,10 +5,9 @@ import pytz
 import cv2
 import os
 from datetime import datetime
-from typing import TypeVar, Type, Dict, Any, Optional, List, Union
+from typing import TypeVar
 
-# Assuming partial_file_hash is in hash_utils
-from jinnang import partial_file_hash
+from ..hash import partial_file_hash
 
 T = TypeVar('T')
 
