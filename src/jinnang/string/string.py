@@ -10,6 +10,13 @@ def get_numeric(value):
         return float(value) if value is not None else None
     except (ValueError, TypeError):
         return None
+    
+
+def get_int(value, default=0):
+    try:
+        return int(value) if value is not None else default
+    except (ValueError, TypeError):
+        return default
 
 
 def safe_format(template: str, data: dict) -> str:
