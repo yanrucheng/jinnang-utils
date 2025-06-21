@@ -7,17 +7,56 @@ A comprehensive collection of Python utility functions and classes for common pr
 
 ## Overview
 
-Jinnang Utils is a utility library that provides a set of reusable functions and classes to simplify common programming tasks. The package is designed to be lightweight, efficient, and easy to use.
+Jinnang Utils is a comprehensive Python utility library designed to simplify common programming tasks. It provides a structured collection of reusable functions and classes, organized for clarity, efficiency, and ease of use.
+
+## Module Structure
+
+The `jinnang` package is organized into logical sub-packages to enhance discoverability and maintainability:
+
+```
+src/
+└── jinnang/
+    ├── __init__.py
+    ├── core/                 # Fundamental, widely used utilities (e.g., arithmetic, basic formatting)
+    │   ├── __init__.py
+    │   ├── arithmetic.py
+    │   └── formatting.py     # General formatting functions
+    ├── io/                   # Input/Output operations (file, system interactions)
+    │   ├── __init__.py
+    │   ├── file.py
+    │   └── system.py         # System-related functions
+    ├── data/                 # Data manipulation, hashing, geo-utilities
+    │   ├── __init__.py
+    │   ├── hash.py
+    │   └── geo_utils.py
+    ├── text/                 # Dedicated for text processing utilities
+    │   ├── __init__.py
+    │   └── text.py
+    ├── common/               # Generic, cross-cutting utilities (decorators, patterns, collections, exceptions)
+    │   ├── __init__.py
+    │   ├── collections.py
+    │   ├── decorators.py
+    │   ├── exceptions.py     # Custom exception classes
+    │   ├── formatters.py     # Specific formatters
+    │   ├── path.py
+    │   └── patterns.py
+    ├── ai/                   # AI-related functionalities (e.g., LLM utilities)
+    │   ├── __init__.py
+    │   └── llm_utils.py
+    └── debug/                # Debugging utilities
+        ├── __init__.py
+        └── debug.py
+```
 
 ## Features
 
-- **Hash Utilities**: Create stable hashes for objects, calculate MD5 hashes, and generate partial file hashes
-- **File Operations**: Validate folder names and file captions
-- **System Utilities**: Suppress stdout/stderr for cleaner output
-- **Formatting Tools**: Safe string formatting and token calculation
-- **Debugging Helpers**: Get Python execution info and class information
-- **Arithmetic Functions**: Statistical operations like finding the mode
-- **Common Patterns**: Design patterns, decorators, and formatters
+-   **Core Utilities**: Essential arithmetic and general formatting functions.
+-   **I/O Operations**: Tools for file system interactions and system-level utilities.
+-   **Data Handling**: Utilities for hashing, geographical data, and general data manipulation.
+-   **Text Processing**: Functions specifically designed for text analysis and transformation.
+-   **Common Helpers**: Reusable components like decorators, design patterns, and collections.
+-   **AI Tools**: Utilities for Large Language Models and other AI-related tasks.
+-   **Debugging**: Helpers for inspecting Python execution and class information.
 
 ## Installation
 
@@ -27,10 +66,10 @@ pip install jinnang-utils
 
 ## Usage
 
-### Hash Utilities
+### Data Handling
 
 ```python
-from jinnang import hash
+from jinnang.data import hash
 
 # Create a stable hash for any object
 hash_value = hash.stable_hash({"key": "value"})
@@ -43,10 +82,10 @@ md5_hash = hash.md5("string to hash")
 file_hash = hash.partial_file_hash("path/to/file")
 ```
 
-### File Operations
+### I/O Operations
 
 ```python
-from jinnang import file
+from jinnang.io import file, system
 
 # Check if a folder name is valid
 if file.is_bad_folder_name("folder/with/invalid:chars"):
@@ -55,12 +94,6 @@ if file.is_bad_folder_name("folder/with/invalid:chars"):
 # Check if a caption has too many question marks
 if file.is_bad_llm_caption("Is this a question? Or this? Or maybe this? Or this one too?"):
     print("Too many questions in caption")
-```
-
-### System Utilities
-
-```python
-from jinnang import system
 
 # Suppress stdout and stderr
 with system.suppress_stdout_stderr():
@@ -72,11 +105,15 @@ with system.suppress_c_stdout_stderr(suppress_stdout=True, suppress_stderr=False
     pass
 ```
 
-### Formatting Tools
+### Core Utilities
 
 ```python
-from jinnang import formatting
-from jinnang.common import TruncatedPrettyPrinter, ResolutionPreset, Verbosity
+from jinnang.core import arithmetic, formatting
+from jinnang.common.formatters import TruncatedPrettyPrinter, ResolutionPreset, Verbosity
+
+# Find the mode of a list
+mode = arithmetic.get_mode([1, 2, 2, 3, 3, 3, 4])
+print(mode)  # Outputs: 3
 
 # Calculate tokens for image dimensions
 tokens = formatting.calculate_tokens(width=512, height=512)
@@ -89,7 +126,7 @@ printer = TruncatedPrettyPrinter(max_width=80)
 printer.pprint(large_object)
 ```
 
-### Debugging Helpers
+### Debugging
 
 ```python
 from jinnang import debug
@@ -109,20 +146,11 @@ debug.print_execution_info()
 debug.print_class_info(MyClass)
 ```
 
-### Arithmetic Functions
+### Common Helpers
 
 ```python
-from jinnang import arithmetic
-
-# Find the mode of a list
-mode = arithmetic.get_mode([1, 2, 2, 3, 3, 3, 4])
-print(mode)  # Outputs: 3
-```
-
-### Common Patterns
-
-```python
-from jinnang.common import mock_when, fail_recover, custom_retry, BadInputException
+from jinnang.common import mock_when, fail_recover, custom_retry
+from jinnang.common.exceptions import BadInputException
 
 # Use decorators
 @mock_when(condition=lambda: is_test_environment)
@@ -142,6 +170,16 @@ def function_to_retry():
 
 # Use exceptions
 raise BadInputException("Invalid input provided")
+```
+
+### AI Tools
+
+```python
+from jinnang.ai import llm_utils
+
+# Example usage of LLM utilities
+# result = llm_utils.process_text_with_llm("Your text here")
+# print(result)
 ```
 
 ## Contributing

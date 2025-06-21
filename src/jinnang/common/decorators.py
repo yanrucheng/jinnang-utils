@@ -14,12 +14,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class BadInputException(Exception):
-    """Exception raised for invalid input data."""
-    pass
-
-
-def mock_when(condition: Callable[[], bool], mock_result: Callable[[], Any]) -> Callable:
+def mock_when(condition: Callable[..., bool]):
     """
     Decorator that returns mock result when condition is True,
     otherwise calls the original function.
