@@ -1,6 +1,7 @@
 import math
 import logging
 from string import Formatter
+from typing import Optional
 
 import pytz
 from dateutil import parser
