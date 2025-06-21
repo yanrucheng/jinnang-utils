@@ -86,6 +86,10 @@ class SingletonFileLoader(Singleton):
                 self.loaded_filename = None
             self._file_loader_initialized = True
         super().__init__(**kwargs)
+        
+    @property
+    def filename(self):
+        return self.loaded_filename
 
     @staticmethod
     def resolve_file_path(
