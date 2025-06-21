@@ -5,6 +5,9 @@ from io import StringIO
 from typing import Optional, Union
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 PathType = Union[str, Path]
 
 @contextlib.contextmanager

@@ -5,13 +5,11 @@ data in various formats. It includes enumerations for common settings and specia
 formatters for improved data visualization.
 """
 
-import math
 import pprint
 from enum import IntEnum, Enum
 from functools import total_ordering
 import logging
-from typing import Any, Dict, List, Tuple, Union, Optional
-from string import Formatter
+from typing import Any, Tuple, Optional
 
 logger = logging.getLogger(__name__)
 

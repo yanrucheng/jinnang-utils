@@ -1,7 +1,6 @@
 import sys
 import inspect
 import os
-import pkgutil
 from importlib.metadata import distribution
 
 def get_python_execution_info():
