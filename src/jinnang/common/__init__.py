@@ -14,9 +14,11 @@ from .formatters import TruncatedPrettyPrinter, ResolutionPreset, Verbosity, get
 from .patterns import GenericSingletonFactory
 from .decorators import mock_when, fail_recover, custom_retry, BadInputException
 from .collections import list_to_tuple, get_unique_key
+from .path import MyPath
 
 # Export all classes
 __all__ = [
+    'MyPath',
     'TruncatedPrettyPrinter',
     'ResolutionPreset', 
     'Verbosity',
