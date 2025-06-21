@@ -1,1 +1,1 @@
-from jinnang.ai.llm_utils import *
+from jinnang.ai.llm_utils import is_bad_llm_caption, extract_fields

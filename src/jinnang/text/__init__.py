@@ -1,1 +1,1 @@
-from jinnang.text.text import *
+from jinnang.text.text import remove_special_chars
