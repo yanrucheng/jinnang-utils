@@ -2,7 +2,7 @@ import os
 import sys
 import contextlib
 from io import StringIO
-from typing import Optional
+from typing import Optional, Union
 from pathlib import Path
 
 PathType = Union[str, Path]
