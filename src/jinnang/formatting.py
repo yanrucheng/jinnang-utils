@@ -64,3 +64,12 @@ def get_int(value, default=0):
         return int(value) if value is not None else default
     except (ValueError, TypeError):
         return default
+    
+
+def timestamp_to_date(timestamp, fstr='%y%m%d', timezone='Asia/Shanghai'):
+    utc_dt = datetime.utcfromtimestamp(timestamp)
+    utc_dt = utc_dt.replace(tzinfo=pytz.UTC)
+    my_tz = pytz.timezone(timezone)
+    my_dt = utc_dt.astimezone(my_tz)
+    return my_dt.strftime(fstr)
+
