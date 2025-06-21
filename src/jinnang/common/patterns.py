@@ -75,21 +75,21 @@ class SingletonFileLoader(Singleton):
             search_locations = kwargs.pop('search_locations', None)
             if filename:
                 try:
-                    self.loaded_filename = self.resolve_file_path(
+                    self.loaded_filepath = self.resolve_file_path(
                         filename=filename,
                         caller_module_path=caller_module_path,
                         search_locations=search_locations
                     )
                 except FileNotFoundError:
-                    self.loaded_filename = None
+                    self.loaded_filepath = None
             else:
-                self.loaded_filename = None
+                self.loaded_filepath = None
             self._file_loader_initialized = True
         super().__init__(**kwargs)
         
     @property
-    def filename(self):
-        return self.loaded_filename
+    def filepath(self):
+        return self.loaded_filepath
 
     @staticmethod
     def resolve_file_path(
