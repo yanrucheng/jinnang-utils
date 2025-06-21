@@ -1,7 +1,7 @@
 # Utils module
 
-# Core utilities
-from jinnang.core.formatting import safe_format, date_str_to_iso_date_str, get_int, timestamp_to_date
+# Common utilities
+from jinnang.common.formatting import safe_format, date_str_to_iso_date_str, get_int, timestamp_to_date
 
 # IO and System utilities
 from jinnang.io.system import suppress_stdout_stderr, get_worker_num_for_io_bounded_task, safe_delete, safe_move, copy_with_meta
