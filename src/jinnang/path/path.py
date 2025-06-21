@@ -73,6 +73,7 @@ class MyPath:
         return datetime.fromtimestamp(self.timestamp, self.timezone).strftime('%y%m%d')
 
     @property
+    @functools.lru_cache(maxsize=8192)
     def time_of_a_day(self):
         """
         Return a human-readable time of day for a given timestamp.
