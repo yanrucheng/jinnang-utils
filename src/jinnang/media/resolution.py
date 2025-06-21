@@ -57,5 +57,9 @@ class ResolutionPreset(Enum):
         if self.value == (None, None):
             return False  # ORIGINAL is always largest
         if other.value == (None, None):
-            return True
-        return (self.value[0], self.value[1]) < (other.value[0], other.value[1])
+            return True  # Any other resolution is less than ORIGINAL
+
+        # Compare based on total pixel count (width * height)
+        self_pixels = self.value[0] * self.value[1]
+        other_pixels = other.value[0] * other.value[1]
+        return self_pixels < other_pixels

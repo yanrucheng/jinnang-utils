@@ -10,6 +10,7 @@ import json
 import traceback
 from typing import Callable, Any, Optional, Type, Union, Tuple
 import logging
+from .exceptions import BadInputException
 
 logger = logging.getLogger(__name__)
 
@@ -128,8 +129,10 @@ def custom_retry(max_retries: int, retry_exceptions: Union[Type[Exception], Tupl
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            if max_retries == 0:
+                return default_output
+
             retries = 0
-            res = ''
             while retries < max_retries:
                 try:
                     res = func(*args, **kwargs)

@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 import contextlib
 from io import StringIO
 from typing import Optional, Union
@@ -95,7 +96,7 @@ def safe_delete(file_path):
     except PermissionError as e:
         raise PermissionError(f"Permission denied: {e}")
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An unexpected error occurred in safe_delete: {type(e).__name__} - {e}")
 
 def safe_move(src: str, dst: str) -> bool:
     try:

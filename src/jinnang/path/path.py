@@ -2,12 +2,11 @@ import functools
 import platform
 import time
 import pytz
-import cv2
 import os
 from datetime import datetime
 from typing import TypeVar
 
-from jinnang.hash import partial_file_hash
+from jinnang.data.hash import partial_file_hash
 
 T = TypeVar('T')
 
@@ -121,20 +120,3 @@ def timestamp_to_date(timestamp, fstr='%y%m%d', timezone='Asia/Shanghai'):
     my_tz = pytz.timezone(timezone)
     my_dt = utc_dt.astimezone(my_tz)
     return my_dt.strftime(fstr)
-
-@functools.lru_cache(maxsize=None)
-def get_video_duration(file_name):
-    """Extract video duration in seconds using OpenCV"""
-    try:
-        video = cv2.VideoCapture(file_name)
-        fps = video.get(cv2.CAP_PROP_FPS)
-        frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-        
-        if fps > 0 and frame_count > 0:
-            duration = frame_count / fps
-            return duration
-        return 0
-    except Exception:
-        return 0
-    finally:
-        video.release()

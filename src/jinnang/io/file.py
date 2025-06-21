@@ -31,6 +31,9 @@ def is_bad_folder_name(name):
     if not name or not isinstance(name, str):  # None, empty, or not string
         return True
     
+    if len(name.strip()) != len(name):
+        return True
+    
     name = name.strip().lower()
     if not name:  # Whitespace-only
         return True

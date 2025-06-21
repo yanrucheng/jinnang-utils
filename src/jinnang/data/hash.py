@@ -2,7 +2,14 @@ import hashlib
 import functools
 import os
 
-@functools.lru_cache(maxsize=8192)
+def _make_hashable(obj):
+    if isinstance(obj, dict):
+        return tuple(sorted((k, _make_hashable(v)) for k, v in obj.items()))
+    elif isinstance(obj, list):
+        return tuple(_make_hashable(elem) for elem in obj)
+    else:
+        return obj
+
 def stable_hash(obj) -> str:
     """
     Create a stable hash for any object using MD5.
@@ -13,9 +20,11 @@ def stable_hash(obj) -> str:
     Returns:
         str: Hexadecimal representation of the hash
     """
-    # Convert the object to a string in a consistent manner
-    # Use repr for a standardized representation
-    obj_str = repr(obj)
+    # Convert the object to a hashable representation
+    hashable_obj = _make_hashable(obj)
+
+    # Convert the hashable object to a string in a consistent manner
+    obj_str = repr(hashable_obj)
 
     # Encode the string into bytes
     obj_bytes = obj_str.encode('utf-8')
@@ -46,7 +55,6 @@ def md5(path):
     return hash_md5.hexdigest()
 
 
-@functools.lru_cache(maxsize=8192)
 def partial_file_hash(path, chunk_size=4096):
     """
     Calculate a partial MD5 hash of a file by reading chunks from the beginning, middle, and end.

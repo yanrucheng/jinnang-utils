@@ -3,5 +3,4 @@ from jinnang.path.path import (
     ensure_unique_path,
     get_file_timestamp,
     timestamp_to_date,
-    get_video_duration
 )
