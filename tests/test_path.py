@@ -107,24 +107,27 @@ class TestPathUtilities(unittest.TestCase):
         """Test MyPath time_of_a_day property."""
         path = MyPath(self.test_file_path)
         
-        # Mock the timestamp to test different times of day
-        time_periods = {
-            # Hour: Expected period
-            3: 'Midnight',
-            7: 'Morning',
-            12: 'Noon',
-            14: 'Afternoon',
-            18: 'Evening',
-            22: 'Night'
-        }
+        # Get current time in Shanghai timezone
+        now = datetime.now(pytz.timezone('Asia/Shanghai'))
+        hour = now.hour
         
-        for hour, expected_period in time_periods.items():
-            # Create a datetime at the specified hour in Shanghai timezone
-            dt = datetime.now(pytz.timezone('Asia/Shanghai')).replace(hour=hour, minute=0, second=0)
-            timestamp = dt.timestamp()
+        # Determine expected time period based on current hour
+        if 0 <= hour < 6:
+            expected_period = 'Midnight'
+        elif 6 <= hour < 12:
+            expected_period = 'Morning'
+        elif hour == 12:
+            expected_period = 'Noon'
+        elif 12 < hour < 18:
+            expected_period = 'Afternoon'
+        elif 18 <= hour < 22:
+            expected_period = 'Evening'
+        else:
+            expected_period = 'Night'
             
-            with patch('jinnang.path.path.get_file_timestamp', return_value=timestamp):
-                self.assertEqual(path.time_of_a_day, expected_period)
+        # Test with current time
+        with patch('jinnang.path.path.get_file_timestamp', return_value=now.timestamp()):
+            self.assertEqual(path.time_of_a_day, expected_period)
 
     def test_get_file_timestamp(self):
         """Test get_file_timestamp function."""
