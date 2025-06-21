@@ -3,6 +3,9 @@ import sys
 import contextlib
 from io import StringIO
 from typing import Optional
+from pathlib import Path
+
+PathType = Union[str, Path]
 
 @contextlib.contextmanager
 def suppress_c_stdout_stderr(suppress_stdout=True, suppress_stderr=False):
