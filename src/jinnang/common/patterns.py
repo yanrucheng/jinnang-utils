@@ -10,22 +10,23 @@ from typing import TypeVar, Type, Dict, Any, Optional, List, ClassVar
 # Type variable for generic class methods
 T = TypeVar('T')
 
-class GenericSingletonFactory:
+class Singleton:
     """
-    Generic singleton factory base class compatible with Python 3.8+.
+    Base singleton class compatible with Python 3.8+.
     
-    This class implements the Singleton pattern with a factory method approach,
-    ensuring only one instance of a class exists and providing a standardized
-    way to access it. It's designed to be subclassed by concrete singleton classes.
+    This class implements the Singleton pattern, ensuring only one instance 
+    of a class exists and providing a standardized way to access it.
     
     Example:
         ```python
-        class MyManager(GenericSingletonFactory):
+        class MyManager(Singleton):
             def __init__(self, config=None):
-                self.config = config or {}
+                if not hasattr(self, '_initialized'):
+                    self.config = config or {}
+                    self._initialized = True
                 
         # Get the singleton instance
-        manager = MyManager.get_instance(config={'setting': 'value'})
+        manager = MyManager(config={'setting': 'value'})
         # Second call returns the same instance
         same_manager = MyManager.get_instance()
         assert manager is same_manager  # True
@@ -33,15 +34,59 @@ class GenericSingletonFactory:
     """
     
     # Class variable to store singleton instances
-    _instances: ClassVar[Dict[Type['GenericSingletonFactory'], 'GenericSingletonFactory']] = {}
-    
-    @classmethod
-    def get_instance(cls: Type[T], *args, **kwargs) -> T:
-        """Get or create the singleton instance"""
+    _instances: ClassVar[Dict[Type['Singleton'], 'Singleton']] = {}
+
+    def __new__(cls: Type[T], *args: Any, **kwargs: Any) -> T:
         if cls not in cls._instances:
-            cls._instances[cls] = cls(*args, **kwargs)
+            cls._instances[cls] = super().__new__(cls)
         return cls._instances[cls]
+
+    @classmethod
+    def get_instance(cls: Type[T], *args: Any, **kwargs: Any) -> T:
+        """Get or create the singleton instance"""
+        return cls(*args, **kwargs)
+
+
+class SingletonFileLoader(Singleton):
+    """
+    Singleton class with file loading capabilities.
     
+    This class combines the Singleton pattern with file path resolution,
+    allowing subclasses to automatically load files during initialization.
+    
+    Example:
+        ```python
+        class ConfigManager(SingletonFileLoader):
+            def __init__(self, filename=None, caller_module_path=None, **kwargs):
+                super().__init__(filename, caller_module_path, **kwargs)
+                if not hasattr(self, '_config_initialized'):
+                    # Load configuration from file
+                    self._config_initialized = True
+                
+        # Both ways work identically
+        config = ConfigManager('config.json', caller_module_path=__file__)
+        same_config = ConfigManager.get_instance('config.json', caller_module_path=__file__)
+        assert config is same_config  # True
+        ```
+    """
+
+    def __init__(self, filename: Optional[str] = None, caller_module_path: Optional[str] = None, **kwargs: Any):
+        if not hasattr(self, '_file_loader_initialized'):
+            search_locations = kwargs.pop('search_locations', None)
+            if filename:
+                try:
+                    self.loaded_filename = self.resolve_file_path(
+                        filename=filename,
+                        caller_module_path=caller_module_path,
+                        search_locations=search_locations
+                    )
+                except FileNotFoundError:
+                    self.loaded_filename = None
+            else:
+                self.loaded_filename = None
+            self._file_loader_initialized = True
+        super().__init__(**kwargs)
+
     @staticmethod
     def resolve_file_path(
         explicit_path: Optional[str] = None,
