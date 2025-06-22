@@ -1,8 +1,9 @@
 """Module for handling video resolution presets."""
 
-from enum import Enum
+from enum import Enum, unique
 from functools import total_ordering
 
+@unique
 @total_ordering
 class ResolutionPreset(Enum):
     """Standard video resolution presets with exact dimensions.
@@ -44,7 +45,38 @@ class ResolutionPreset(Enum):
     RES_48P = (48, 48)          # Extremely small (practically unusable for video)
     RES_32P = (32, 32)          # Thumbnail/legacy icon size
     RES_16P = (16, 16)          # Smallest usable (favicon-sized)
+    
+    
+    @classmethod
+    def from_string(cls, value: str) -> 'Resolution':
+        """Initialize from shorthand notation like '1080p' or '4k'"""
+        value = value.upper().strip()
+        
+        # Handle "P" notation (720P, 1080P)
+        if value.endswith('P'):
+            height = int(value[:-1])
+            return cls(f"RES_{height}P")
+        
+        # Handle "K" notation (2K, 4K)
+        if value.endswith('K'):
+            return cls(f"RES_{value}")
+        
+        # Handle raw numbers (16, 32)
+        if value.isdigit():
+            return cls(f"RES_{value}")
+        
+        raise ValueError(f"Unknown resolution format: {value}")
 
+    @property
+    def width(self) -> int:
+        return self.value[0]
+    
+    @property
+    def height(self) -> int:
+        return self.value[1]
+    
+    def __repr__(self) -> str:
+        return f"{self.name} ({self.width}x{self.height})"
 
     def __eq__(self, other):
         if not isinstance(other, ResolutionPreset):
