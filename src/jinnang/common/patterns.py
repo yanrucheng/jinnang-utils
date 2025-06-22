@@ -154,7 +154,8 @@ class SingletonFileLoader(Singleton):
         """Resolves the absolute path to a file, searching in specified locations.
 
         This static method attempts to find a file by first checking an explicit
-        path, then searching through a series of prioritized locations including
+        path. If the explicit path is not provided or the file is not found there,
+        it then searches through a series of prioritized locations including
         caller-relative paths, provided search locations, and default application
         paths.
 
@@ -176,8 +177,18 @@ class SingletonFileLoader(Singleton):
             FileNotFoundError: If the file cannot be found in any of the specified
                 or default search locations.
         """
-        if explicit_path and os.path.exists(explicit_path):
-            return explicit_path
+        if explicit_path:
+            if verbosity >= Verbosity.DETAIL:
+                logging.debug(f"Checking explicit path: {explicit_path}")
+            if os.path.exists(explicit_path) and os.path.isfile(explicit_path):
+                if verbosity >= Verbosity.ONCE:
+                    logging.info(f"Found file via explicit path: {explicit_path}")
+                return explicit_path
+            elif verbosity >= Verbosity.DETAIL:
+                logging.debug(f"Explicit path does not exist or is not a file: {explicit_path}")
+
+        if verbosity >= Verbosity.DETAIL:
+            logging.debug(f"Falling back to search locations for filename: {filename}")
 
         potential_paths = SingletonFileLoader._get_search_paths(
             filename=filename,
@@ -187,6 +198,7 @@ class SingletonFileLoader(Singleton):
         )
 
         for potential_path in potential_paths:
+
             if os.path.exists(potential_path) and os.path.isfile(potential_path):
                 if verbosity >= Verbosity.ONCE:
                     logging.info(f"Found file: {potential_path}")
