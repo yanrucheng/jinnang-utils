@@ -42,8 +42,10 @@ src/
     │   ├── formatting_utils.py # General formatting utilities
 │   ├── formatters.py     # Simple formatting utility functions
 │   ├── verbosity.py      # Verbosity level enumeration
-    │   ├── path.py
     │   └── patterns.py
+    ├── path/                 # Path resolution utilities
+    │   ├── __init__.py
+    │   └── path.py
     ├── ai/                   # AI-related functionalities (e.g., LLM utilities)
     │   ├── __init__.py
     │   └── llm_utils.py
@@ -177,6 +179,30 @@ def function_to_retry():
 
 # Use exceptions
 raise BadInputException("Invalid input provided")
+```
+
+### Path Utilities
+
+```python
+from jinnang.path.path import RelPathSeeker
+import os
+
+# Resolve a file path relative to the caller module
+# Assuming 'my_config.json' is in the same directory as the script calling this
+resolved_path = RelPathSeeker.resolve_file_path(
+    filename="my_config.json",
+    caller_module_path=__file__
+)
+print(f"Resolved path: {resolved_path}")
+
+# Example with a non-existent file (will raise FileNotFoundError)
+try:
+    RelPathSeeker.resolve_file_path(
+        filename="non_existent_file.txt",
+        caller_module_path=__file__
+    )
+except FileNotFoundError as e:
+    print(f"Error: {e}")
 ```
 
 ### AI Tools
