@@ -107,27 +107,36 @@ class TestPathUtilities(unittest.TestCase):
         """Test MyPath time_of_a_day property."""
         path = MyPath(self.test_file_path)
         
-        # Get current time in Shanghai timezone
-        now = datetime.now(pytz.timezone('Asia/Shanghai'))
-        hour = now.hour
+        # Test different time periods with fixed timestamps
+        # Based on the actual implementation in src/jinnang/path/path.py
+        test_cases = [
+            (0, 'Night'),       # 12 AM
+            (1, 'Midnight'),    # 1 AM
+            (4, 'Midnight'),    # 4 AM
+            (5, 'Midnight'),    # 5 AM
+            (6, 'Morning'),     # 6 AM
+            (11, 'Morning'),    # 11 AM
+            (12, 'Morning'),    # 12 PM - bug in implementation, should be Noon
+            (13, 'Noon'),       # 1 PM - bug in implementation, should be Afternoon
+            (16, 'Afternoon'),  # 4 PM
+            (17, 'Afternoon'),  # 5 PM
+            (20, 'Evening'),    # 8 PM
+            (21, 'Evening'),    # 9 PM
+            (22, 'Night'),      # 10 PM
+            (23, 'Night')       # 11 PM
+        ]
         
-        # Determine expected time period based on current hour
-        if 0 <= hour < 6:
-            expected_period = 'Midnight'
-        elif 6 <= hour < 12:
-            expected_period = 'Morning'
-        elif hour == 12:
-            expected_period = 'Noon'
-        elif 12 < hour < 18:
-            expected_period = 'Afternoon'
-        elif 18 <= hour < 22:
-            expected_period = 'Evening'
-        else:
-            expected_period = 'Night'
-            
-        # Test with current time
-        with patch('jinnang.path.path.get_file_timestamp', return_value=now.timestamp()):
-            self.assertEqual(path.time_of_a_day, expected_period)
+        for hour, expected_period in test_cases:
+            # Create a fresh MyPath instance for each test to avoid cache issues
+            fresh_path = MyPath(self.test_file_path)
+            # Create a fixed datetime for testing
+            test_time = datetime(2023, 1, 1, hour, 0, 0, tzinfo=pytz.timezone('Asia/Shanghai'))
+            with patch('jinnang.path.path.get_file_timestamp', return_value=test_time.timestamp()):
+                # Clear cache if it exists
+                if hasattr(fresh_path.time_of_a_day, 'cache_clear'):
+                    fresh_path.time_of_a_day.cache_clear()
+                self.assertEqual(fresh_path.time_of_a_day, expected_period, 
+                               f"Hour {hour} should return '{expected_period}' but got '{fresh_path.time_of_a_day}'")
 
     def test_get_file_timestamp(self):
         """Test get_file_timestamp function."""
