@@ -17,52 +17,58 @@ The `jinnang` package is organized into logical sub-packages to enhance discover
 src/
 └── jinnang/
     ├── __init__.py
-    ├── core/                 # Fundamental, widely used utilities (e.g., arithmetic, basic formatting)
+    ├── ai/                   # AI-related functionalities (e.g., LLM utilities)
     │   ├── __init__.py
-    │   ├── arithmetic.py
-    │   └── formatting.py     # General formatting functions
+    │   └── llm_utils.py
+    ├── arithmetic/           # Arithmetic and numerical utilities
+    │   ├── __init__.py
+    │   └── arithmetic.py
+    ├── common/               # Generic, cross-cutting utilities (decorators, patterns, collections, exceptions)
+    │   ├── __init__.py
+    │   ├── collections.py
+    │   ├── decorators.py
+    │   ├── exceptions.py     # Custom exception classes
+    │   └── patterns.py
+    ├── data/                 # Data manipulation, hashing, geo-utilities
+    │   ├── __init__.py
+    │   ├── hash.py
+    │   └── geo_utils.py
+    ├── date/                 # Date and time utilities
+    │   ├── __init__.py
+    │   └── date.py
+    ├── debug/                # Debugging utilities
+    │   ├── __init__.py
+    │   └── debug.py
     ├── io/                   # Input/Output operations (file, system interactions)
     │   ├── __init__.py
     │   ├── file.py
     │   └── system.py         # System-related functions
     ├── media/                # Media-related utilities
     │   └── resolution.py    # Video resolution presets
-    ├── data/                 # Data manipulation, hashing, geo-utilities
-    │   ├── __init__.py
-    │   ├── hash.py
-    │   └── geo_utils.py
-    ├── text/                 # Dedicated for text processing utilities
-    │   ├── __init__.py
-    │   └── text.py
-    ├── common/               # Generic, cross-cutting utilities (decorators, patterns, collections, exceptions)
-    │   ├── __init__.py
-    │   ├── collections.py
-    │   ├── decorators.py
-    │   ├── exceptions.py     # Custom exception classes
-    │   ├── formatting_utils.py # General formatting utilities
-│   ├── formatters.py     # Simple formatting utility functions
-│   ├── verbosity.py      # Verbosity level enumeration
-    │   └── patterns.py
     ├── path/                 # Path resolution utilities
     │   ├── __init__.py
     │   └── path.py
-    ├── ai/                   # AI-related functionalities (e.g., LLM utilities)
+    ├── string/               # String manipulation and formatting utilities
     │   ├── __init__.py
-    │   └── llm_utils.py
-    └── debug/                # Debugging utilities
+    │   └── string.py
+    └── verbosity/            # Verbosity level management
         ├── __init__.py
-        └── debug.py
+        └── verbosity.py
 ```
 
 ## Features
 
--   **Core Utilities**: Essential arithmetic and general formatting functions.
--   **I/O Operations**: Tools for file system interactions and system-level utilities.
--   **Data Handling**: Utilities for hashing, geographical data, and general data manipulation.
--   **Text Processing**: Functions specifically designed for text analysis and transformation.
--   **Common Helpers**: Reusable components like decorators, design patterns, and collections.
 -   **AI Tools**: Utilities for Large Language Models and other AI-related tasks.
+-   **Arithmetic Utilities**: Essential arithmetic and numerical functions.
+-   **Common Helpers**: Reusable components like decorators, design patterns, and collections.
+-   **Data Handling**: Utilities for hashing, geographical data, and general data manipulation.
+-   **Date Utilities**: Tools for handling date and time operations.
 -   **Debugging**: Helpers for inspecting Python execution and class information.
+-   **I/O Operations**: Tools for file system interactions and system-level utilities.
+-   **Media Utilities**: Tools for media-related functionalities.
+-   **Path Utilities**: Functions for resolving file paths.
+-   **String Utilities**: Functions specifically designed for string analysis and transformation.
+-   **Verbosity Management**: Utilities for controlling output verbosity.
 
 ## Installation
 
@@ -111,28 +117,64 @@ with system.suppress_c_stdout_stderr(suppress_stdout=True, suppress_stderr=False
     pass
 ```
 
-### Core Utilities
+### Arithmetic Utilities
 
 ```python
-from jinnang.core import arithmetic, formatting
-from jinnang.common.verbosity import Verbosity
-from jinnang.media.resolution import ResolutionPreset
+from jinnang.arithmetic import arithmetic
 
 # Find the mode of a list
 mode = arithmetic.get_mode([1, 2, 2, 3, 3, 3, 4])
 print(mode)  # Outputs: 3
+```
 
-# Calculate tokens for image dimensions
-tokens = formatting.calculate_tokens(width=512, height=512)
+### String Utilities
+
+```python
+from jinnang.string import string
 
 # Safe string formatting
-result = formatting.safe_format("Hello {name}", {"name": "World", "age": 30})
+result = string.safe_format("Hello {name}", {"name": "World", "age": 30})
+print(result)
 
-# Use truncated pretty printer
-# Use standard Python pretty printing
-import pprint
-printer = pprint.PrettyPrinter(max_width=80)
-printer.pprint(large_object)
+# Calculate tokens for image dimensions
+tokens = string.calculate_tokens(width=512, height=512)
+print(tokens)
+```
+
+### Date Utilities
+
+```python
+from jinnang.date import date
+
+# Get the current UTC datetime
+now_utc = date.get_now_utc()
+print(f"Current UTC time: {now_utc}")
+
+# Convert UTC to local time
+local_time = date.utc_to_local(now_utc)
+print(f"Local time: {local_time}")
+
+# Format datetime to string
+formatted_date = date.format_datetime(now_utc, "%Y-%m-%d %H:%M:%S")
+print(f"Formatted date: {formatted_date}")
+```
+
+### Verbosity Management
+
+```python
+from jinnang.verbosity import verbosity
+from jinnang.verbosity.verbosity import Verbosity
+
+# Set the global verbosity level
+verbosity.set_verbosity(Verbosity.INFO)
+
+# Check the current verbosity level
+current_level = verbosity.get_verbosity()
+print(f"Current verbosity level: {current_level}")
+
+# Conditionally execute code based on verbosity
+if verbosity.is_verbose(Verbosity.DEBUG):
+    print("This message only appears in DEBUG mode or higher.")
 ```
 
 ### Debugging

@@ -105,8 +105,6 @@ class TestPathUtilities(unittest.TestCase):
 
     def test_my_path_time_of_a_day(self):
         """Test MyPath time_of_a_day property."""
-        path = MyPath(self.test_file_path)
-        
         # Test different time periods with fixed timestamps
         # Based on the actual implementation in src/jinnang/path/path.py
         test_cases = [
