@@ -5,7 +5,10 @@ Factory, and other structural patterns that can be reused throughout the applica
 """
 
 import os
+import logging
 from typing import TypeVar, Type, Dict, Any, Optional, List, ClassVar
+
+from jinnang.verbosity.verbosity import Verbosity
 
 # Type variable for generic class methods
 T = TypeVar('T')
@@ -70,19 +73,30 @@ class SingletonFileLoader(Singleton):
         ```
     """
 
-    def __init__(self, filename: Optional[str] = None, caller_module_path: Optional[str] = None, **kwargs: Any):
+    def __init__(
+        self,
+        filename: Optional[str] = None,
+        caller_module_path: Optional[str] = None,
+        explicit_path: Optional[str] = None,
+        search_locations: Optional[List[str]] = None,
+        verbosity: Verbosity = Verbosity.FULL,
+        **kwargs: Any
+    ):
         if not hasattr(self, '_file_loader_initialized'):
-            search_locations = kwargs.pop('search_locations', None)
-            if filename:
-                try:
-                    self.loaded_filepath = self.resolve_file_path(
-                        filename=filename,
-                        caller_module_path=caller_module_path,
-                        search_locations=search_locations
-                    )
-                except FileNotFoundError:
-                    self.loaded_filepath = None
-            else:
+            if not any([filename, explicit_path, search_locations]):
+                raise ValueError(
+                    "At least one of 'filename', 'explicit_path', or 'search_locations' must be provided."
+                )
+
+            try:
+                self.loaded_filepath = self.resolve_file_path(
+                    explicit_path=explicit_path,
+                    filename=filename,
+                    caller_module_path=caller_module_path,
+                    search_locations=search_locations,
+                    verbosity=verbosity
+                )
+            except FileNotFoundError:
                 self.loaded_filepath = None
             self._file_loader_initialized = True
         super().__init__(**kwargs)
@@ -92,52 +106,93 @@ class SingletonFileLoader(Singleton):
         return self.loaded_filepath
 
     @staticmethod
+    def _get_search_paths(
+        filename: str = "",
+        search_locations: Optional[List[str]] = None,
+        caller_module_path: Optional[str] = None,
+        verbosity: Verbosity = Verbosity.FULL
+    ) -> List[str]:
+        """Generates a list of potential file paths based on search locations.
+
+        This static method constructs a prioritized list of absolute file paths
+        where a given filename might be located. It considers the caller's module
+        path, explicit search locations, and default application search paths.
+
+        Args:
+            filename (str): The name of the file to search for.
+            search_locations (Optional[List[str]]): A list of additional directories
+                to search. These are prioritized over default locations.
+            caller_module_path (Optional[str]): The `__file__` attribute of the
+                calling module, used to determine a relative search path.
+            verbosity (Verbosity): The verbosity level for logging.
+
+        Returns:
+            List[str]: A list of absolute paths where the file might exist,
+            ordered by search priority.
+        """
+        module_path = caller_module_path or __file__
+        default_locations = [
+            '.',
+            os.path.dirname(module_path),
+            os.path.join(os.path.dirname(module_path), '..'),
+            os.path.join(os.path.dirname(module_path), '../..'),
+        ]
+        locations = search_locations if search_locations is not None else default_locations
+        potential_paths = [os.path.join(directory, filename) for directory in locations]
+        if verbosity >= Verbosity.DETAIL:
+            logging.debug(f"Potential search paths for '{filename}': {potential_paths}")
+        return potential_paths
+
+    @staticmethod
     def resolve_file_path(
         explicit_path: Optional[str] = None,
         filename: str = "",
         search_locations: Optional[List[str]] = None,
-        caller_module_path: Optional[str] = None
+        caller_module_path: Optional[str] = None,
+        verbosity: Verbosity = Verbosity.FULL
     ) -> str:
-        """
-        Resolve a file path by searching in multiple locations.
-        
-        This utility method helps locate files by checking multiple directories
-        in a predefined order. It's useful for configuration files, templates,
-        or other resources that might be in different locations depending on
-        the execution context.
-        
+        """Resolves the absolute path to a file, searching in specified locations.
+
+        This static method attempts to find a file by first checking an explicit
+        path, then searching through a series of prioritized locations including
+        caller-relative paths, provided search locations, and default application
+        paths.
+
         Args:
-            explicit_path: Direct file path to check first
-            filename: Name of the file to find
-            search_locations: List of directories to search in
-            caller_module_path: Path to the caller's module (__file__). If None, uses this module's path.
-            
+            explicit_path (Optional[str]): An absolute path to the file. If provided
+                and valid, this path is used directly.
+            filename (str): The name of the file to resolve. Required if
+                `explicit_path` is not provided or not found.
+            search_locations (Optional[List[str]]): A list of additional directories
+                to search. These are prioritized over default locations.
+            caller_module_path (Optional[str]): The `__file__` attribute of the
+                calling module, used to determine a relative search path.
+            verbosity (Verbosity): The verbosity level for logging.
+
         Returns:
-            str: Absolute path to the found file
-            
+            str: The absolute path to the resolved file.
+
         Raises:
-            FileNotFoundError: If the file cannot be found in any location
+            FileNotFoundError: If the file cannot be found in any of the specified
+                or default search locations.
         """
         if explicit_path and os.path.exists(explicit_path):
             return explicit_path
-            
-        # Use caller's module path if provided, otherwise use this module's path
-        module_path = caller_module_path or __file__
-            
-        default_locations = [
-            '.',  # Current directory
-            os.path.dirname(module_path),  # Module directory
-            os.path.join(os.path.dirname(module_path), '..'),  # Parent dir
-            os.path.join(os.path.dirname(module_path), '../..'),  # Grandparent dir
-        ]
-        
-        locations = search_locations if search_locations is not None else default_locations
-        
-        for directory in locations:
-            potential_path = os.path.join(directory, filename)
-            if os.path.exists(potential_path) and os.path.isfile(potential_path):
-                return potential_path
-                
-        raise FileNotFoundError(
-            f"Could not find {filename} in any of these locations: {locations}"
+
+        potential_paths = SingletonFileLoader._get_search_paths(
+            filename=filename,
+            search_locations=search_locations,
+            caller_module_path=caller_module_path,
+            verbosity=verbosity
         )
+
+        for potential_path in potential_paths:
+            if os.path.exists(potential_path) and os.path.isfile(potential_path):
+                if verbosity >= Verbosity.ONCE:
+                    logging.info(f"Found file: {potential_path}")
+                return potential_path
+
+        error_message = f"Could not find {filename} in any of these locations: {potential_paths}"
+        if verbosity >= Verbosity.ONCE:
+            logging.error(error_message)
+        raise FileNotFoundError(error_message)
