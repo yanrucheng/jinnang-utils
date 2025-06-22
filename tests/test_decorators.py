@@ -1,12 +1,175 @@
 import unittest
-import json
+import unittest
 import time
 from unittest.mock import patch, MagicMock
 from jinnang.common.decorators import mock_when, fail_recover, custom_retry
 from jinnang.common.exceptions import BadInputException
+import json
 
 class TestDecorators(unittest.TestCase):
-    """Test cases for decorator utility functions."""
+
+    def test_mock_when_condition_true(self):
+        # Test case where condition is true, mock_result should be returned
+        mock_condition = lambda: True
+        mock_result_func = lambda *args, **kwargs: "mocked_value"
+
+        @mock_when(mock_condition, mock_result_func)
+        def original_function():
+            return "original_value"
+
+        self.assertEqual(original_function(), "mocked_value")
+
+    def test_mock_when_condition_false(self):
+        # Test case where condition is false, original function should be called
+        mock_condition = lambda: False
+
+        @mock_when(mock_condition, None) # mock_result is not used when condition is false
+        def original_function():
+            return "original_value"
+
+        self.assertEqual(original_function(), "original_value")
+
+    def test_mock_when_mock_result_raises_exception(self):
+        # Test case where mock_result raises an exception, should fall back to original
+        mock_condition = lambda: True
+        def mock_result_func_raises():
+            raise ValueError("Mock error")
+
+        @mock_when(mock_condition, mock_result_func_raises)
+        def original_function():
+            return "original_value"
+
+        self.assertEqual(original_function(), "original_value")
+
+    def test_mock_when_mock_result_raises_exception_logging(self):
+        # Test case to ensure the warning log is triggered when mock_result raises an exception
+        mock_condition = lambda: True
+        def mock_result_func_raises():
+            raise ValueError("Mock error")
+
+        @mock_when(mock_condition, mock_result_func_raises)
+        def original_function():
+            return "original_value"
+
+        with self.assertLogs('jinnang.common.decorators', level='WARNING') as cm:
+            original_function()
+            self.assertIn('Cannot find result for', cm.output[0])
+
+    def test_fail_recover_no_exception(self):
+        # Test case where no exception occurs
+        @fail_recover
+        def successful_function():
+            return {"status": "success"}
+
+        result = successful_function()
+        self.assertEqual(result, {"status": "success"})
+
+    def test_fail_recover_json_decode_error(self):
+        # Test case for JSONDecodeError
+        @fail_recover
+        def json_error_function():
+            raise json.JSONDecodeError("Invalid JSON", "doc", 0)
+
+        result = json_error_function()
+        self.assertEqual(result['statusCode'], 400)
+        self.assertIn("Invalid JSON", result['body'])
+
+    def test_fail_recover_bad_input_exception(self):
+        # Test case for BadInputException
+        @fail_recover
+        def bad_input_function():
+            raise BadInputException("Bad input provided")
+
+        result = bad_input_function()
+        self.assertEqual(result['statusCode'], 400)
+        self.assertIn("Bad input provided", result['body'])
+
+    def test_fail_recover_generic_exception(self):
+        # Test case for a generic Exception
+        @fail_recover
+        def generic_error_function():
+            raise ValueError("Something went wrong")
+
+        result = generic_error_function()
+        self.assertEqual(result['statusCode'], 500)
+        self.assertIn("Something went wrong", result['body'])
+
+    def test_custom_retry_success_first_attempt(self):
+        # Test case where function succeeds on the first attempt
+        mock_func = MagicMock(return_value="success")
+        @custom_retry(max_retries=3, retry_exceptions=ValueError)
+        def func():
+            return mock_func()
+
+        self.assertEqual(func(), "success")
+        mock_func.assert_called_once()
+
+    def test_custom_retry_success_after_retry(self):
+        # Test case where function succeeds after one retry
+        mock_func = MagicMock(side_effect=[ValueError("fail"), "success"])
+        @custom_retry(max_retries=3, retry_exceptions=ValueError, delay=0.01)
+        def func():
+            return mock_func()
+
+        self.assertEqual(func(), "success")
+        self.assertEqual(mock_func.call_count, 2)
+
+    def test_custom_retry_all_retries_fail(self):
+        # Test case where function fails after all retries
+        mock_func = MagicMock(side_effect=ValueError("fail"))
+        @custom_retry(max_retries=3, retry_exceptions=ValueError, delay=0.01, default_output="default")
+        def func():
+            return mock_func()
+
+        self.assertEqual(func(), "default")
+        self.assertEqual(mock_func.call_count, 3)
+
+    def test_custom_retry_no_retries(self):
+        # Test case with max_retries = 0
+        mock_func = MagicMock(side_effect=ValueError("fail"))
+        @custom_retry(max_retries=0, retry_exceptions=ValueError, default_output="no_retry")
+        def func():
+            return mock_func()
+
+        self.assertEqual(func(), "no_retry")
+        mock_func.assert_not_called()
+
+    def test_custom_retry_different_exception(self):
+        # Test case where a different exception is raised (should not retry)
+        mock_func = MagicMock(side_effect=TypeError("wrong type"))
+        @custom_retry(max_retries=3, retry_exceptions=ValueError, default_output="default")
+        def func():
+            return mock_func()
+
+        with self.assertRaises(TypeError):
+            func()
+        mock_func.assert_called_once()
+
+    def test_custom_retry_multiple_exceptions(self):
+        # Test case with multiple retry exceptions
+        mock_func = MagicMock(side_effect=[ValueError("v"), TypeError("t"), "success"])
+        @custom_retry(max_retries=3, retry_exceptions=(ValueError, TypeError), delay=0.01)
+        def func():
+            return mock_func()
+
+        self.assertEqual(func(), "success")
+        self.assertEqual(mock_func.call_count, 3)
+
+    def test_custom_retry_delay(self):
+        # Test that delay is respected
+        mock_func = MagicMock(side_effect=[ValueError("fail"), "success"])
+        start_time = time.time()
+        @custom_retry(max_retries=2, retry_exceptions=ValueError, delay=0.1)
+        def func():
+            return mock_func()
+
+        func()
+        end_time = time.time()
+        self.assertGreaterEqual(end_time - start_time, 0.1)
+
+
+if __name__ == '__main__':
+    unittest.main()
 
     def test_mock_when_condition_true(self):
         """Test mock_when decorator when condition is True."""

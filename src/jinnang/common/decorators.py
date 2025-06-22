@@ -15,7 +15,7 @@ from .exceptions import BadInputException
 logger = logging.getLogger(__name__)
 
 
-def mock_when(condition: Callable[..., bool]):
+def mock_when(condition: Callable[..., bool], mock_result: Callable[..., Any]):
     """
     Decorator that returns mock result when condition is True,
     otherwise calls the original function.
@@ -43,7 +43,7 @@ def mock_when(condition: Callable[..., bool]):
         def wrapper(*args, **kwargs) -> Any:
             if condition():
                 try:
-                    res = mock_result(*args, **kwargs)
+                    res = mock_result(*args, **kwargs) if callable(mock_result) else mock_result
                     logger.info(f'Matching key={args} & {kwargs}. we got res={res}')
                     return res
                 except:

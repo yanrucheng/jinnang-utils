@@ -17,7 +17,17 @@ class TestFileIO(unittest.TestCase):
         # Test invalid captions (more than 3 question marks)
         self.assertTrue(is_bad_llm_caption("Is this a question? What about this? And this? And one more?"))
         self.assertTrue(is_bad_llm_caption("????? Multiple question marks"))
-        
+
+    def test_is_bad_folder_name_with_whitespace(self):
+        # Test case for folder names with leading/trailing whitespace
+        self.assertTrue(is_bad_folder_name(" foldername"))
+        self.assertTrue(is_bad_folder_name("foldername "))
+        self.assertTrue(is_bad_folder_name(" foldername "))
+
+    def test_is_bad_folder_name_empty_or_whitespace(self):
+        # Test case for empty string or string with only whitespace
+        self.assertTrue(is_bad_folder_name(""))
+        self.assertTrue(is_bad_folder_name("   "))
         # Test with Chinese question marks
         self.assertFalse(is_bad_llm_caption("这是一个问题？"))
         self.assertFalse(is_bad_llm_caption("这是一个问题？这是另一个问题？这是第三个问题？"))
