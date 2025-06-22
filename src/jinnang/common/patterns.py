@@ -77,23 +77,19 @@ class SingletonFileLoader(Singleton):
         self,
         filename: Optional[str] = None,
         caller_module_path: Optional[str] = None,
-        explicit_path: Optional[str] = None,
-        search_locations: Optional[List[str]] = None,
         verbosity: Verbosity = Verbosity.FULL,
         **kwargs: Any
     ):
         if not hasattr(self, '_file_loader_initialized'):
-            if not any([filename, explicit_path, search_locations]):
+            if not (filename or caller_module_path):
                 raise ValueError(
-                    "At least one of 'filename', 'explicit_path', or 'search_locations' must be provided."
+                    "At least one of 'filename' or 'caller_module_path' must be provided."
                 )
 
             try:
                 self.loaded_filepath = self.resolve_file_path(
-                    explicit_path=explicit_path,
                     filename=filename,
                     caller_module_path=caller_module_path,
-                    search_locations=search_locations,
                     verbosity=verbosity
                 )
             except FileNotFoundError:
@@ -108,20 +104,16 @@ class SingletonFileLoader(Singleton):
     @staticmethod
     def _get_search_paths(
         filename: str = "",
-        search_locations: Optional[List[str]] = None,
         caller_module_path: Optional[str] = None,
         verbosity: Verbosity = Verbosity.FULL
     ) -> List[str]:
-        """Generates a list of potential file paths based on search locations.
+        """Generates a list of potential file paths based on the caller's module path.
 
         This static method constructs a prioritized list of absolute file paths
-        where a given filename might be located. It considers the caller's module
-        path, explicit search locations, and default application search paths.
+        where a given filename might be located, relative to the calling module.
 
         Args:
             filename (str): The name of the file to search for.
-            search_locations (Optional[List[str]]): A list of additional directories
-                to search. These are prioritized over default locations.
             caller_module_path (Optional[str]): The `__file__` attribute of the
                 calling module, used to determine a relative search path.
             verbosity (Verbosity): The verbosity level for logging.
@@ -131,13 +123,12 @@ class SingletonFileLoader(Singleton):
             ordered by search priority.
         """
         module_path = caller_module_path or __file__
-        default_locations = [
-            '.',
+        locations = [
             os.path.dirname(module_path),
             os.path.join(os.path.dirname(module_path), '..'),
             os.path.join(os.path.dirname(module_path), '../..'),
+            '.'
         ]
-        locations = search_locations if search_locations is not None else default_locations
         potential_paths = [os.path.join(directory, filename) for directory in locations]
         if verbosity >= Verbosity.DETAIL:
             logging.debug(f"Potential search paths for '{filename}': {potential_paths}")
@@ -145,27 +136,17 @@ class SingletonFileLoader(Singleton):
 
     @staticmethod
     def resolve_file_path(
-        explicit_path: Optional[str] = None,
         filename: str = "",
-        search_locations: Optional[List[str]] = None,
         caller_module_path: Optional[str] = None,
         verbosity: Verbosity = Verbosity.FULL
     ) -> str:
-        """Resolves the absolute path to a file, searching in specified locations.
+        """Resolves the absolute path to a file based on the caller's module path.
 
-        This static method attempts to find a file by first checking an explicit
-        path. If the explicit path is not provided or the file is not found there,
-        it then searches through a series of prioritized locations including
-        caller-relative paths, provided search locations, and default application
-        paths.
+        This static method attempts to find a file by searching through a series
+        of prioritized locations relative to the calling module.
 
         Args:
-            explicit_path (Optional[str]): An absolute path to the file. If provided
-                and valid, this path is used directly.
-            filename (str): The name of the file to resolve. Required if
-                `explicit_path` is not provided or not found.
-            search_locations (Optional[List[str]]): A list of additional directories
-                to search. These are prioritized over default locations.
+            filename (str): The name of the file to resolve.
             caller_module_path (Optional[str]): The `__file__` attribute of the
                 calling module, used to determine a relative search path.
             verbosity (Verbosity): The verbosity level for logging.
@@ -177,22 +158,11 @@ class SingletonFileLoader(Singleton):
             FileNotFoundError: If the file cannot be found in any of the specified
                 or default search locations.
         """
-        if explicit_path:
-            if verbosity >= Verbosity.DETAIL:
-                logging.debug(f"Checking explicit path: {explicit_path}")
-            if os.path.exists(explicit_path) and os.path.isfile(explicit_path):
-                if verbosity >= Verbosity.ONCE:
-                    logging.info(f"Found file via explicit path: {explicit_path}")
-                return explicit_path
-            elif verbosity >= Verbosity.DETAIL:
-                logging.debug(f"Explicit path does not exist or is not a file: {explicit_path}")
-
         if verbosity >= Verbosity.DETAIL:
-            logging.debug(f"Falling back to search locations for filename: {filename}")
+            logging.debug(f"Searching for filename: {filename}")
 
         potential_paths = SingletonFileLoader._get_search_paths(
             filename=filename,
-            search_locations=search_locations,
             caller_module_path=caller_module_path,
             verbosity=verbosity
         )

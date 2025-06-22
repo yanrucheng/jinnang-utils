@@ -1,0 +1,17 @@
+# Sample Configuration File
+
+app:
+  name: MySampleApp
+  version: 1.0.0
+  debug_mode: true
+
+database:
+  type: postgresql
+  host: localhost
+  port: 5432
+  user: admin
+  password: password
+
+api:
+  base_url: https://api.example.com
+  timeout_seconds: 30

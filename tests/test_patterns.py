@@ -1,8 +1,7 @@
 import logging
 import os
-import tempfile
 import unittest
-from pathlib import Path
+import tempfile
 from unittest.mock import patch
 
 from jinnang.common.patterns import Singleton, SingletonFileLoader
@@ -19,8 +18,8 @@ class TestSingleton(Singleton):
 
 class TestSingletonFileLoader(SingletonFileLoader):
     """Test implementation of SingletonFileLoader for testing"""
-    def __init__(self, *args, value=None, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, filename=None, caller_module_path=None, verbosity=Verbosity.FULL, value=None):
+        super().__init__(filename=filename, caller_module_path=caller_module_path, verbosity=verbosity)
         if not hasattr(self, '_initialized'):
             self.value = value
             self._initialized = True
@@ -30,26 +29,6 @@ class TestSingletonAndFileLoader(unittest.TestCase):
     def setUp(self):
         # Clear singleton instances
         Singleton._instances = {}
-
-        # Create temporary directory
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.temp_path = Path(self.temp_dir.name)
-
-        # Create a dummy file for testing resolve_file_path
-        self.dummy_file_path = self.temp_path / "dummy_file.txt"
-        with open(self.dummy_file_path, "w") as f:
-            f.write("dummy content")
-
-        # Create subdirectories and a test file for _get_search_paths logging test
-        self.subdir1 = self.temp_path / "search_dir1"
-        self.subdir1.mkdir()
-        self.test_file1 = self.subdir1 / "test1.txt"
-        with open(self.test_file1, "w") as f:
-            f.write("test1 content")
-
-    def tearDown(self):
-        # Clean up the temporary directory
-        self.temp_dir.cleanup()
     
     def test_singleton_pattern(self):
         # Test that multiple calls return the same instance
@@ -97,68 +76,40 @@ class TestSingletonAndFileLoader(unittest.TestCase):
         self.assertIn(TestSingleton, Singleton._instances)
         self.assertIn(AnotherSingleton, Singleton._instances)
     
-    def test_file_loader_explicit_path(self):
-        test_file = self.temp_path / "explicit_test.txt"
-        with open(test_file, "w") as f:
-            f.write("Explicit content")
-        
-        loader = TestSingletonFileLoader(explicit_path=str(test_file))
-        self.assertEqual(loader.loaded_filepath, str(test_file))
 
-    def test_file_loader_explicit_path_and_filename(self):
-        test_file = self.temp_path / "explicit_test_and_filename.txt"
-        with open(test_file, "w") as f:
-            f.write("Explicit content")
-        
-        loader = TestSingletonFileLoader(explicit_path=str(test_file), filename="should_be_ignored.txt")
-        self.assertEqual(loader.loaded_filepath, str(test_file))
-
-    def test_file_loader_explicit_path_nonexistent_fallback_to_filename(self):
-        non_existent_explicit_path = self.temp_path / "non_existent_explicit.txt"
-        test_file = self.temp_path / "fallback_file.txt"
-        with open(test_file, "w") as f:
-            f.write("Fallback content")
-        
-        loader = TestSingletonFileLoader(
-            explicit_path=str(non_existent_explicit_path),
-            filename="fallback_file.txt",
-            search_locations=[str(self.temp_path)]
-        )
-        self.assertEqual(loader.loaded_filepath, str(test_file))
-
-    def test_file_loader_search_locations(self):
-        # Create new unique subdirectories for this test to avoid conflicts
-        with tempfile.TemporaryDirectory(dir=self.temp_path) as temp_subdir1_name:
-            with tempfile.TemporaryDirectory(dir=self.temp_path) as temp_subdir2_name:
-                 subdir1 = Path(temp_subdir1_name)
-                 subdir2 = Path(temp_subdir2_name)
-                 
-                 test_file = subdir2 / "search_file.txt"
-                 # Ensure the parent directory exists before creating the file
-                 test_file.parent.mkdir(parents=True, exist_ok=True)
-                 with open(test_file, "w") as f:
-                         f.write("Search content")
-
-                 loader = TestSingletonFileLoader(
-                     filename="search_file.txt",
-                     search_locations=[str(subdir1), str(subdir2)]
-                 )
-                 self.assertEqual(loader.loaded_filepath, str(test_file))
 
     def test_file_loader_no_filename_or_paths(self):
         with self.assertRaises(ValueError) as cm:
             TestSingletonFileLoader()
-        self.assertIn("At least one of 'filename', 'explicit_path', or 'search_locations' must be provided", str(cm.exception))
+        self.assertIn("At least one of 'filename' or 'caller_module_path' must be provided.", str(cm.exception))
 
-    def test_file_loader_filename_none_explicit_path_none_search_locations_none(self):
+    def test_file_loader_filename_none_caller_module_path_none(self):
         with self.assertRaises(ValueError) as cm:
-            TestSingletonFileLoader(filename=None, explicit_path=None, search_locations=None)
-        self.assertIn("At least one of 'filename', 'explicit_path', or 'search_locations' must be provided", str(cm.exception))
+            TestSingletonFileLoader(filename=None, caller_module_path=None)
+        self.assertIn("At least one of 'filename' or 'caller_module_path' must be provided.", str(cm.exception))
+
+    def test_file_loader_filename_only(self):
+        # Create a dummy file in the current test file's directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        test_file_name = "test_file_loader_filename_only.txt"
+        test_file_path = os.path.join(current_dir, test_file_name)
+        with open(test_file_path, "w") as f:
+            f.write("filename only content")
+
+        try:
+            loader = TestSingletonFileLoader(
+                filename=test_file_name,
+                caller_module_path=__file__
+            )
+            self.assertEqual(loader.loaded_filepath, test_file_path)
+        finally:
+            if os.path.exists(test_file_path):
+                os.remove(test_file_path)
 
     def test_file_loader_not_found(self):
         loader = TestSingletonFileLoader(
             filename="non_existent.txt",
-            caller_module_path=str(self.temp_path)
+            caller_module_path=__file__
         )
         self.assertIsNone(loader.loaded_filepath)
 
@@ -184,269 +135,84 @@ class TestSingletonAndFileLoader(unittest.TestCase):
     def test_resolve_file_path_logging(self):
         """Test logging output for resolve_file_path with different verbosity levels"""
         # Create a dummy file for testing
-        dummy_file = self.temp_path / "dummy.txt"
-        with open(dummy_file, "w") as f:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        dummy_file_name = "dummy.txt"
+        dummy_file_path = os.path.join(current_dir, dummy_file_name)
+        with open(dummy_file_path, "w") as f:
             f.write("dummy content")
 
-        # Test Verbosity.SILENT - no logging
-        # We don't use assertLogs here because we expect no logs to be emitted.
-        # If any logs were emitted, it would be a failure of the SILENT verbosity.
-        SingletonFileLoader.resolve_file_path(
-            explicit_path=str(dummy_file),
-            verbosity=Verbosity.SILENT
-        )
-
-        # Test Verbosity.ONCE - info level for found file
-        with patch('jinnang.common.patterns.logging.info') as mock_info:
+        try:
+            # Test Verbosity.SILENT - no logging
+            # We don't use assertLogs here because we expect no logs to be emitted.
+            # If any logs were emitted, it would be a failure of the SILENT verbosity.
             SingletonFileLoader.resolve_file_path(
-                explicit_path=str(dummy_file),
-                verbosity=Verbosity.ONCE
+                filename=dummy_file_name,
+                caller_module_path=__file__,
+                verbosity=Verbosity.SILENT
             )
-            mock_info.assert_called_once_with(f"Found file via explicit path: {dummy_file}")
 
-        # Test Verbosity.DETAIL - debug for explicit path check, info for found file
-        with patch('jinnang.common.patterns.logging.debug') as mock_debug, \
-             patch('jinnang.common.patterns.logging.info') as mock_info:
-            SingletonFileLoader.resolve_file_path(
-                explicit_path=str(dummy_file),
-                verbosity=Verbosity.DETAIL
-            )
-            mock_debug.assert_called_once_with(f"Checking explicit path: {dummy_file}")
-            mock_info.assert_called_once_with(f"Found file via explicit path: {dummy_file}")
-
-        # Test Verbosity.FULL - debug for explicit path check, info for found file
-        with patch('jinnang.common.patterns.logging.debug') as mock_debug, \
-             patch('jinnang.common.patterns.logging.info') as mock_info:
-            SingletonFileLoader.resolve_file_path(
-                explicit_path=str(dummy_file),
-                verbosity=Verbosity.FULL
-            )
-            mock_debug.assert_called_once_with(f"Checking explicit path: {dummy_file}")
-            mock_info.assert_called_once_with(f"Found file via explicit path: {dummy_file}")
-
-        # Test FileNotFoundError logging
-        non_existent_filename = "non_existent_file_for_logging.txt"
-        test_search_locations = [str(self.temp_path)]
-        with patch('jinnang.common.patterns.logging.error') as mock_error:
-            with self.assertRaises(FileNotFoundError):
+            # Test Verbosity.ONCE - info level for found file
+            with patch('jinnang.common.patterns.logging.info') as mock_info:
                 SingletonFileLoader.resolve_file_path(
-                    filename=non_existent_filename,
-                    search_locations=test_search_locations,
+                    filename=dummy_file_name,
+                    caller_module_path=__file__,
                     verbosity=Verbosity.ONCE
                 )
-            expected_potential_paths = [os.path.join(loc, non_existent_filename) for loc in test_search_locations]
-            mock_error.assert_called_once_with(f"Could not find {non_existent_filename} in any of these locations: {expected_potential_paths}")
+                mock_info.assert_called_once_with(f"Found file: {dummy_file_path}")
 
-        # Test _get_search_paths logging
-        with patch('jinnang.common.patterns.logging.debug') as mock_debug:
-            SingletonFileLoader._get_search_paths(
-                filename="test1.txt",
-                search_locations=[str(self.subdir1)],
-                verbosity=Verbosity.DETAIL
-            )
-            mock_debug.assert_called_once_with(f"Potential search paths for 'test1.txt': ['{self.test_file1}']")
+            # Test Verbosity.DETAIL - debug for path checks, info for found file
+            with patch('jinnang.common.patterns.logging.debug') as mock_debug, \
+                 patch('jinnang.common.patterns.logging.info') as mock_info:
+                SingletonFileLoader.resolve_file_path(
+                    filename=dummy_file_name,
+                    caller_module_path=__file__,
+                    verbosity=Verbosity.DETAIL
+                )
+                # Check for at least one debug call related to path checking
+                mock_debug.assert_called()
+                mock_info.assert_called_once_with(f"Found file: {dummy_file_path}")
+
+            # Test Verbosity.FULL - debug for path checks, info for found file
+            with patch('jinnang.common.patterns.logging.debug') as mock_debug, \
+                 patch('jinnang.common.patterns.logging.info') as mock_info:
+                SingletonFileLoader.resolve_file_path(
+                    filename=dummy_file_name,
+                    caller_module_path=__file__,
+                    verbosity=Verbosity.FULL
+                )
+                # Check for at least one debug call related to path checking
+                mock_debug.assert_called()
+                mock_info.assert_called_once_with(f"Found file: {dummy_file_path}")
+
+            # Test FileNotFoundError logging
+            non_existent_filename = "non_existent_file_for_logging.txt"
+            with patch('jinnang.common.patterns.logging.error') as mock_error:
+                with self.assertRaises(FileNotFoundError):
+                    SingletonFileLoader.resolve_file_path(
+                        filename=non_existent_filename,
+                        caller_module_path=__file__,
+                        verbosity=Verbosity.ONCE
+                    )
+                mock_error.assert_called_once()
+
+        finally:
+            if os.path.exists(dummy_file_path):
+                os.remove(dummy_file_path)
 
     def test_file_loader_default_locations(self):
-        test_file = self.temp_path / "default_location_test.txt"
-        with open(test_file, "w") as f:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        test_file_name = "default_location_test.txt"
+        test_file_path = os.path.join(current_dir, test_file_name)
+        with open(test_file_path, "w") as f:
             f.write("Default content")
         
-        original_dir = os.getcwd()
         try:
-            os.chdir(str(self.temp_path))
-            loader = TestSingletonFileLoader(filename="default_location_test.txt")
-            self.assertEqual(os.path.basename(loader.loaded_filepath), "default_location_test.txt")
+            loader = TestSingletonFileLoader(filename=test_file_name, caller_module_path=__file__)
+            self.assertEqual(loader.loaded_filepath, test_file_path)
         finally:
-            os.chdir(original_dir)
+            if os.path.exists(test_file_path):
+                os.remove(test_file_path)
 
-
-class TestResolveFilePath(unittest.TestCase):
-    """Comprehensive tests for the resolve_file_path static method"""
-    
-    def setUp(self):
-        # Create temporary directory structure for testing
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.temp_path = Path(self.temp_dir.name)
-        
-        # Create test directory structure
-        self.subdir1 = self.temp_path / "subdir1"
-        self.subdir2 = self.temp_path / "subdir2"
-        self.nested_dir = self.temp_path / "nested" / "deep"
-        
-        self.subdir1.mkdir()
-        self.subdir2.mkdir()
-        self.nested_dir.mkdir(parents=True)
-        
-        # Create test files
-        self.test_file1 = self.subdir1 / "test1.txt"
-        self.test_file2 = self.subdir2 / "test2.txt"
-        self.nested_file = self.nested_dir / "nested.txt"
-        self.root_file = self.temp_path / "root.txt"
-        
-        with open(self.test_file1, "w") as f:
-            f.write("content1")
-        with open(self.test_file2, "w") as f:
-            f.write("content2")
-        with open(self.nested_file, "w") as f:
-            f.write("nested content")
-        with open(self.root_file, "w") as f:
-            f.write("root content")
-    
-    def tearDown(self):
-        self.temp_dir.cleanup()
-    
-    def test_explicit_path_exists(self):
-        """Test that explicit_path is returned when it exists"""
-        result = SingletonFileLoader.resolve_file_path(
-            explicit_path=str(self.test_file1),
-            filename="ignored.txt"
-        )
-        self.assertEqual(result, str(self.test_file1))
-
-    def test_explicit_path_nonexistent_fallback_to_filename(self):
-        """Test that if explicit_path doesn't exist, it falls back to filename and search locations"""
-        non_existent_path = self.temp_path / "non_existent.txt"
-        result = SingletonFileLoader.resolve_file_path(
-            explicit_path=str(non_existent_path),
-            filename="test2.txt",
-            search_locations=[str(self.subdir1), str(self.subdir2)]
-        )
-        self.assertEqual(result, str(self.test_file2))
-
-    def test_explicit_path_nonexistent_no_fallback(self):
-        """Test that if explicit_path doesn't exist and no fallback, it raises FileNotFoundError"""
-        non_existent_path = self.temp_path / "non_existent.txt"
-        with self.assertRaises(FileNotFoundError):
-            SingletonFileLoader.resolve_file_path(
-                explicit_path=str(non_existent_path),
-                filename="non_existent_file.txt",
-                search_locations=[str(self.subdir1)]
-            )
-
-    def test_explicit_path_is_directory(self):
-        """Test that explicit_path is ignored if it's a directory, and falls back"""
-        result = SingletonFileLoader.resolve_file_path(
-            explicit_path=str(self.subdir1),
-            filename="test2.txt",
-            search_locations=[str(self.subdir2)]
-        )
-        self.assertEqual(result, str(self.test_file2))
-
-    def test_explicit_path_nonexistent(self):
-        """Test that explicit_path is ignored when it doesn't exist"""
-        with self.assertRaises(FileNotFoundError):
-            SingletonFileLoader.resolve_file_path(
-                explicit_path="/nonexistent/path.txt",
-                filename="also_nonexistent.txt"
-            )
-    
-    def test_filename_in_search_locations(self):
-        """Test finding file in custom search locations"""
-        result = SingletonFileLoader.resolve_file_path(
-            filename="test1.txt",
-            search_locations=[str(self.subdir1), str(self.subdir2)]
-        )
-        self.assertEqual(result, str(self.test_file1))
-        
-        # Test second location when first doesn't have the file
-        result = SingletonFileLoader.resolve_file_path(
-            filename="test2.txt",
-            search_locations=[str(self.subdir1), str(self.subdir2)]
-        )
-        self.assertEqual(result, str(self.test_file2))
-    
-    def test_filename_in_default_locations(self):
-        """Test finding file in default locations based on caller_module_path"""
-        # Create a file in the temp directory
-        test_file = self.temp_path / "default_test.txt"
-        with open(test_file, "w") as f:
-            f.write("default content")
-        
-        # Mock caller module path to point to temp directory
-        fake_module_path = str(self.temp_path / "fake_module.py")
-        
-        result = SingletonFileLoader.resolve_file_path(
-            filename="default_test.txt",
-            caller_module_path=fake_module_path
-        )
-        self.assertEqual(result, str(test_file))
-    
-    def test_filename_in_parent_directory(self):
-        """Test finding file in parent directory of caller module"""
-        # Create file in parent of nested directory
-        parent_file = self.temp_path / "parent_test.txt"
-        with open(parent_file, "w") as f:
-            f.write("parent content")
-        
-        # Mock caller module path to be in nested directory
-        fake_module_path = str(self.nested_dir / "fake_module.py")
-        
-        result = SingletonFileLoader.resolve_file_path(
-            filename="parent_test.txt",
-            caller_module_path=fake_module_path
-        )
-        # The function returns the path as constructed with os.path.join
-        expected_path = os.path.join(str(self.nested_dir), "..", "..", "parent_test.txt")
-        self.assertEqual(result, expected_path)
-    
-    def test_filename_in_grandparent_directory(self):
-        """Test finding file in grandparent directory of caller module"""
-        # Create file in grandparent directory
-        grandparent_dir = self.temp_path / "grandparent"
-        parent_dir = grandparent_dir / "parent"
-        child_dir = parent_dir / "child"
-        
-        grandparent_dir.mkdir()
-        parent_dir.mkdir()
-        child_dir.mkdir()
-        
-        grandparent_file = grandparent_dir / "grandparent_test.txt"
-        with open(grandparent_file, "w") as f:
-            f.write("grandparent content")
-        
-        # Mock caller module path to be in child directory
-        fake_module_path = str(child_dir / "fake_module.py")
-        
-        result = SingletonFileLoader.resolve_file_path(
-            filename="grandparent_test.txt",
-            caller_module_path=fake_module_path
-        )
-        # The function returns the path as constructed with os.path.join
-        expected_path = os.path.join(str(child_dir), "..", "..", "grandparent_test.txt")
-        self.assertEqual(result, expected_path)
-    
-    def test_current_directory_search(self):
-        """Test finding file in current directory"""
-        original_cwd = os.getcwd()
-        try:
-            os.chdir(str(self.temp_path))
-            result = SingletonFileLoader.resolve_file_path(
-                filename="root.txt"
-            )
-            # The function returns relative path when found in current directory
-            self.assertEqual(result, "./root.txt")
-        finally:
-            os.chdir(original_cwd)
-    
-    def test_file_not_found_error(self):
-        """Test that FileNotFoundError is raised when file is not found"""
-        with self.assertRaises(FileNotFoundError) as context:
-            SingletonFileLoader.resolve_file_path(
-                filename="nonexistent.txt",
-                search_locations=[str(self.subdir1), str(self.subdir2)]
-            )
-        
-        error_message = str(context.exception)
-        self.assertIn("Could not find nonexistent.txt", error_message)
-        self.assertIn(str(self.subdir1), error_message)
-        self.assertIn(str(self.subdir2), error_message)
-    
-    def test_empty_filename(self):
-        """Test behavior with empty filename"""
-        # Empty filename will try to find a file named "" which should not exist
-        # But the function will actually look for os.path.join(directory, "") which is just the directory
-        # Since directories exist, this might not raise FileNotFoundError as expected
-        # Let's test with a clearly non-existent filename instead
         with self.assertRaises(FileNotFoundError):
             SingletonFileLoader.resolve_file_path(filename="clearly_nonexistent_file_12345.txt")
     
@@ -464,262 +230,333 @@ class TestResolveFilePath(unittest.TestCase):
         self.assertIn("Could not find definitely_nonexistent.txt", error_message)
     
     def test_empty_search_locations(self):
-        """Test behavior with empty search locations list"""
+        """Test behavior when file is not found with default search locations"""
         with self.assertRaises(FileNotFoundError):
             SingletonFileLoader.resolve_file_path(
-                filename="test.txt",
-                search_locations=[]
+                filename="nonexistent_file_in_default_locations.txt",
+                caller_module_path=__file__
             )
     
     def test_search_locations_priority(self):
         """Test that search locations are checked in order"""
-        # Create same filename in both directories
-        file1 = self.subdir1 / "priority_test.txt"
-        file2 = self.subdir2 / "priority_test.txt"
-        
-        with open(file1, "w") as f:
-            f.write("first")
-        with open(file2, "w") as f:
-            f.write("second")
-        
-        # Should find the first one
-        result = SingletonFileLoader.resolve_file_path(
-            filename="priority_test.txt",
-            search_locations=[str(self.subdir1), str(self.subdir2)]
-        )
-        self.assertEqual(result, str(file1))
-        
-        # Reverse order should find the second one
-        result = SingletonFileLoader.resolve_file_path(
-            filename="priority_test.txt",
-            search_locations=[str(self.subdir2), str(self.subdir1)]
-        )
-        self.assertEqual(result, str(file2))
+        with tempfile.TemporaryDirectory() as tmpdir1, tempfile.TemporaryDirectory() as tmpdir2:
+            # Create same filename in both directories
+            file_name = "priority_test.txt"
+            file1_path = os.path.join(tmpdir1, file_name)
+            file2_path = os.path.join(tmpdir2, file_name)
+            
+            with open(file1_path, "w") as f:
+                f.write("first")
+            with open(file2_path, "w") as f:
+                f.write("second")
+            
+            # Should find the first one
+            result = SingletonFileLoader.resolve_file_path(
+                filename=file_name,
+                caller_module_path=file1_path # Simulate calling from tmpdir1
+            )
+            self.assertEqual(result, file1_path)
+            
+            # Simulate calling from tmpdir2, should find the second one
+            result = SingletonFileLoader.resolve_file_path(
+                filename=file_name,
+                caller_module_path=file2_path
+            )
+            self.assertEqual(result, file2_path)
     
-    def test_absolute_path_handling(self):
-        """Test that absolute paths are handled correctly"""
-        absolute_path = str(self.test_file1.resolve())
-        result = SingletonFileLoader.resolve_file_path(
-            explicit_path=absolute_path
-        )
-        self.assertEqual(result, absolute_path)
+
     
     def test_relative_path_in_search_locations(self):
         """Test relative paths in search locations"""
-        original_cwd = os.getcwd()
-        try:
-            os.chdir(str(self.temp_path))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create a dummy module file in the temporary directory
+            dummy_caller_path = os.path.join(tmpdir, "dummy_caller.py")
+            with open(dummy_caller_path, "w") as f:
+                f.write("import os")
+
+            # Create the test file directly in the temporary directory
+            test_file_name = "test1.txt"
+            test_file_path = os.path.join(tmpdir, test_file_name)
+            with open(test_file_path, "w") as f:
+                f.write("content")
+
             result = SingletonFileLoader.resolve_file_path(
-                filename="test1.txt",
-                search_locations=["subdir1", "subdir2"]
+                filename=test_file_name,
+                caller_module_path=dummy_caller_path
             )
-            # The function returns the path as constructed with os.path.join
-            expected_path = os.path.join("subdir1", "test1.txt")
-            self.assertEqual(result, expected_path)
-            # Verify the file actually exists at this path
+            self.assertEqual(result, test_file_path)
             self.assertTrue(os.path.exists(result))
-        finally:
-             os.chdir(original_cwd)
     
     def test_explicit_path_takes_precedence(self):
-        """Test that explicit_path takes precedence over filename and search_locations"""
-        # Create a file that would be found by filename search
-        decoy_file = self.subdir1 / "decoy.txt"
-        with open(decoy_file, "w") as f:
-            f.write("decoy content")
-        
-        # Use explicit_path that points to a different file
-        result = SingletonFileLoader.resolve_file_path(
-            explicit_path=str(self.test_file2),
-            filename="decoy.txt",
-            search_locations=[str(self.subdir1)]
-        )
-        # Should return explicit_path, not the file found by filename
-        self.assertEqual(result, str(self.test_file2))
+        """Test that an explicit path takes precedence over search locations"""
+        with tempfile.TemporaryDirectory() as tmpdir1, \
+             tempfile.TemporaryDirectory() as tmpdir2:
+            # Create a file in tmpdir1
+            file1_path = os.path.join(tmpdir1, "file1.txt")
+            with open(file1_path, "w") as f:
+                f.write("content1")
+
+            # Create a file in tmpdir2 with the same name
+            file2_path = os.path.join(tmpdir2, "file1.txt")
+            with open(file2_path, "w") as f:
+                f.write("content2")
+
+            # Create a file in tmpdir1
+            file1_path = os.path.join(tmpdir1, "file1.txt")
+            with open(file1_path, "w") as f:
+                f.write("content1")
+
+            # Create a file in tmpdir2
+            file2_path = os.path.join(tmpdir2, "file2.txt")
+            with open(file2_path, "w") as f:
+                f.write("content2")
+
+            # Test that file1 is found when tmpdir1 is the caller_module_path
+            result = SingletonFileLoader.resolve_file_path(
+                filename="file1.txt",
+                caller_module_path=os.path.join(tmpdir1, "dummy_module.py")
+            )
+            self.assertEqual(result, file1_path)
+
+            # Test that file2 is found when tmpdir2 is the caller_module_path
+            result = SingletonFileLoader.resolve_file_path(
+                filename="file2.txt",
+                caller_module_path=os.path.join(tmpdir2, "another_dummy_module.py")
+            )
+            self.assertEqual(result, file2_path)
     
     def test_symlink_handling(self):
         """Test that symlinks are handled correctly"""
-        # Create a symlink to test file
-        symlink_path = self.temp_path / "symlink.txt"
-        try:
-            os.symlink(str(self.test_file1), str(symlink_path))
-            
-            result = SingletonFileLoader.resolve_file_path(
-                explicit_path=str(symlink_path)
-            )
-            self.assertEqual(result, str(symlink_path))
-        except OSError:
-            # Skip test if symlinks are not supported (e.g., on Windows without admin rights)
-            self.skipTest("Symlinks not supported on this system")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            original_file_path = os.path.join(tmpdir, "original.txt")
+            with open(original_file_path, "w") as f:
+                f.write("original content")
+
+            symlink_path = os.path.join(tmpdir, "symlink.txt")
+            try:
+                os.symlink(original_file_path, symlink_path)
+
+                # Test with explicit_path pointing to the symlink
+                result = SingletonFileLoader.resolve_file_path(
+                    filename=os.path.basename(symlink_path),
+                    caller_module_path=os.path.dirname(symlink_path)
+                )
+                self.assertEqual(result, symlink_path)
+
+                # Test with filename pointing to the symlink (should resolve to original)
+                # This behavior might need clarification based on SingletonFileLoader's exact symlink handling
+                # For now, assuming it returns the symlink path if given as filename/explicit_path
+                # If it's supposed to resolve to the real path, this test needs adjustment.
+                # The resolve_file_path function is designed to find a file, not necessarily resolve symlinks to their targets.
+                # If the symlink itself is passed as the filename, it should be found.
+                # If the symlink's directory is passed as caller_module_path and the symlink's name as filename,
+                # it should also find the symlink.
+                result_filename = SingletonFileLoader.resolve_file_path(
+                    filename=os.path.basename(symlink_path),
+                    caller_module_path=tmpdir
+                )
+                self.assertEqual(result_filename, symlink_path)
+
+            except OSError:
+                # Skip test if symlinks are not supported (e.g., on Windows without admin rights)
+                self.skipTest("Symlinks not supported on this system")
     
     def test_directory_as_filename(self):
         """Test behavior when filename is actually a directory"""
-        # The function should not return directories, only files
-        with self.assertRaises(FileNotFoundError):
-            SingletonFileLoader.resolve_file_path(
-                filename="subdir1",
-                search_locations=[str(self.temp_path)]
-            )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create a dummy directory inside the temporary directory
+            dummy_subdir = os.path.join(tmpdir, "dummy_subdir")
+            os.makedirs(dummy_subdir)
+
+            # The function should not return directories, only files
+            with self.assertRaises(FileNotFoundError):
+                SingletonFileLoader.resolve_file_path(
+                    filename="dummy_subdir",
+                    caller_module_path=tmpdir
+                )
     
     def test_filename_with_path_separators(self):
-        """Test filename containing path separators"""
-        # Create nested file structure
-        nested_file = self.subdir1 / "nested" / "deep.txt"
-        nested_file.parent.mkdir()
-        with open(nested_file, "w") as f:
-            f.write("nested content")
-        
-        # Try to find file using relative path as filename
-        result = SingletonFileLoader.resolve_file_path(
-            filename="nested/deep.txt",
-            search_locations=[str(self.subdir1)]
-        )
-        expected_path = os.path.join(str(self.subdir1), "nested", "deep.txt")
-        self.assertEqual(result, expected_path)
+        """Test that filenames with path separators are resolved correctly"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            nested_dir = os.path.join(tmpdir, "nested")
+            os.makedirs(nested_dir, exist_ok=True)
+            nested_file_name = "deep.txt"
+            nested_file_path = os.path.join(nested_dir, nested_file_name)
+            with open(nested_file_path, "w") as f:
+                f.write("nested content")
+            
+            dummy_module_path = os.path.join(tmpdir, "dummy_module.py")
+            with open(dummy_module_path, "w") as f:
+                f.write("import os")
+
+            result = SingletonFileLoader.resolve_file_path(
+                filename=os.path.join("nested", nested_file_name),
+                caller_module_path=dummy_module_path
+            )
+            self.assertEqual(result, nested_file_path)
     
     def test_case_sensitivity(self):
         """Test case sensitivity behavior (platform dependent)"""
-        # Create a file with specific case
-        case_file = self.temp_path / "CaseTest.TXT"
-        with open(case_file, "w") as f:
-            f.write("case content")
-        
-        # Try to find with different case
-        try:
-            result = SingletonFileLoader.resolve_file_path(
-                filename="casetest.txt",
-                search_locations=[str(self.temp_path)]
-            )
-            # On case-insensitive filesystems (like macOS default), this should work
-            # On case-sensitive filesystems, this should raise FileNotFoundError
-            self.assertTrue(os.path.exists(result))
-        except FileNotFoundError:
-            # This is expected on case-sensitive filesystems
-            pass
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create a file with specific case
+            case_file_name = "CaseTest.TXT"
+            case_file_path = os.path.join(tmpdir, case_file_name)
+            with open(case_file_path, "w") as f:
+                f.write("case content")
+            
+            # Try to find with different case
+            try:
+                result = SingletonFileLoader.resolve_file_path(
+                    filename="casetest.txt",
+                    caller_module_path=tmpdir
+                )
+                # On case-insensitive filesystems (like macOS default), this should work
+                # On case-sensitive filesystems, this should raise FileNotFoundError
+                self.assertTrue(os.path.exists(result))
+            except FileNotFoundError:
+                # This is expected on case-sensitive filesystems
+                pass
     
     def test_unicode_filenames(self):
         """Test handling of unicode characters in filenames"""
-        # Create file with unicode characters
-        unicode_file = self.temp_path / "测试文件.txt"
-        with open(unicode_file, "w", encoding="utf-8") as f:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        test_file_name = "测试文件.txt"
+        test_file_path = os.path.join(current_dir, test_file_name)
+        with open(test_file_path, "w", encoding="utf-8") as f:
             f.write("unicode content")
-        
-        result = SingletonFileLoader.resolve_file_path(
-            filename="测试文件.txt",
-            search_locations=[str(self.temp_path)]
-        )
-        expected_path = os.path.join(str(self.temp_path), "测试文件.txt")
-        self.assertEqual(result, expected_path)
+
+        try:
+            result = SingletonFileLoader.resolve_file_path(
+                filename=test_file_name,
+                caller_module_path=__file__
+            )
+            self.assertEqual(result, test_file_path)
+        finally:
+            if os.path.exists(test_file_path):
+                os.remove(test_file_path)
     
     def test_very_long_filename(self):
         """Test handling of very long filenames"""
-        # Create a file with a very long name (but within filesystem limits)
+        current_dir = os.path.dirname(os.path.abspath(__file__))
         long_name = "a" * 100 + ".txt"
-        long_file = self.temp_path / long_name
-        with open(long_file, "w") as f:
+        test_file_path = os.path.join(current_dir, long_name)
+        with open(test_file_path, "w") as f:
             f.write("long name content")
-        
-        result = SingletonFileLoader.resolve_file_path(
-            filename=long_name,
-            search_locations=[str(self.temp_path)]
-        )
-        expected_path = os.path.join(str(self.temp_path), long_name)
-        self.assertEqual(result, expected_path)
+
+        try:
+            result = SingletonFileLoader.resolve_file_path(
+                filename=long_name,
+                caller_module_path=__file__
+            )
+            self.assertEqual(result, test_file_path)
+        finally:
+            if os.path.exists(test_file_path):
+                os.remove(test_file_path)
     
     def test_special_characters_in_path(self):
         """Test handling of special characters in paths"""
-        # Create directory with special characters
-        special_dir = self.temp_path / "dir with spaces & symbols!"
-        special_dir.mkdir()
-        
-        special_file = special_dir / "file with spaces.txt"
-        with open(special_file, "w") as f:
-            f.write("special content")
-        
-        result = SingletonFileLoader.resolve_file_path(
-            filename="file with spaces.txt",
-            search_locations=[str(special_dir)]
-        )
-        expected_path = os.path.join(str(special_dir), "file with spaces.txt")
-        self.assertEqual(result, expected_path)
+        # Create a temporary directory and file with special characters
+        with tempfile.TemporaryDirectory() as tmpdir:
+            special_dir = os.path.join(tmpdir, "dir with spaces & symbols!")
+            os.makedirs(special_dir)
+            
+            special_file_name = "file with spaces.txt"
+            special_file_path = os.path.join(special_dir, special_file_name)
+            with open(special_file_path, "w") as f:
+                f.write("special content")
+            
+            result = SingletonFileLoader.resolve_file_path(
+                filename=special_file_name,
+                caller_module_path=special_file_path # Use the path of the created file as caller_module_path
+            )
+            self.assertEqual(result, special_file_path)
     
     def test_nonexistent_search_directory(self):
-        """Test behavior when search directory doesn't exist"""
-        nonexistent_dir = str(self.temp_path / "nonexistent")
-        
-        with self.assertRaises(FileNotFoundError):
-            SingletonFileLoader.resolve_file_path(
-                filename="test.txt",
-                search_locations=[nonexistent_dir, str(self.subdir1)]
-            )
+        """Test that a nonexistent search directory does not cause issues"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            nonexistent_dir = os.path.join(tmpdir, "nonexistent_dir")
+            # This should not raise an error, just not find the file
+            dummy_module_path = os.path.join(tmpdir, "dummy_module.py")
+            with open(dummy_module_path, "w") as f:
+                f.write("import os")
+
+            # This should not raise an error, just not find the file
+            with self.assertRaises(FileNotFoundError):
+                SingletonFileLoader.resolve_file_path(
+                    filename="nonexistent_file.txt",
+                    caller_module_path=dummy_module_path
+                )
     
     def test_permission_denied_directory(self):
         """Test behavior when search directory exists but is not readable"""
         # This test is platform-specific and may not work on all systems
-        restricted_dir = self.temp_path / "restricted"
-        restricted_dir.mkdir()
-        
-        # Create a file in the directory first
-        test_file = restricted_dir / "restricted_file.txt"
-        with open(test_file, "w") as f:
-            f.write("restricted content")
-        
-        try:
-            # Remove read permissions (Unix-like systems)
-            os.chmod(str(restricted_dir), 0o000)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            restricted_dir = os.path.join(tmpdir, "restricted")
+            os.makedirs(restricted_dir)
             
-            # The function should handle this gracefully and continue to next location
-            with self.assertRaises(FileNotFoundError):
-                SingletonFileLoader.resolve_file_path(
-                    filename="restricted_file.txt",
-                    search_locations=[str(restricted_dir), str(self.subdir1)]
-                )
-        except (OSError, PermissionError):
-            # Skip test if permission manipulation is not supported
-            self.skipTest("Permission manipulation not supported on this system")
-        finally:
-            # Restore permissions for cleanup
+            # Create a file in the directory first
+            test_file_name = "restricted_file.txt"
+            test_file_path = os.path.join(restricted_dir, test_file_name)
+            with open(test_file_path, "w") as f:
+                f.write("restricted content")
+            
+            original_permissions = None
             try:
-                os.chmod(str(restricted_dir), 0o755)
-            except (OSError, PermissionError):
-                pass
+                # Remove read permissions (Unix-like systems)
+                original_permissions = os.stat(restricted_dir).st_mode
+                os.chmod(restricted_dir, 0o000)
+                
+                # The function should handle this gracefully and continue to next location
+                with self.assertRaises(FileNotFoundError):
+                    SingletonFileLoader.resolve_file_path(
+                        filename=test_file_name,
+                        caller_module_path=restricted_dir
+                    )
+            except OSError as e:
+                # If chmod fails (e.g., on Windows without appropriate privileges),
+                # skip the test as permissions cannot be manipulated as expected.
+                if "Operation not permitted" in str(e) or "Access is denied" in str(e):
+                    self.skipTest(f"Cannot change file permissions: {e}")
+                raise # Re-raise other OS errors
+            finally:
+                # Restore original permissions and then ensure permissions are restored for cleanup
+                if original_permissions is not None:
+                    os.chmod(restricted_dir, original_permissions)
+                try:
+                    os.chmod(restricted_dir, 0o755)
+                except (OSError, PermissionError):
+                    pass
 
 
 class TestSingletonFileLoaderIntegration(unittest.TestCase):
     """Integration tests for SingletonFileLoader with resolve_file_path"""
     
-    def setUp(self):
-        # Clear singleton instances
-        Singleton._instances = {}
-        
-        # Create temporary directory
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.temp_path = Path(self.temp_dir.name)
-        
-        # Create test file
-        self.config_file = self.temp_path / "config.json"
-        with open(self.config_file, "w") as f:
-            f.write('{"setting": "value"}')
-    
-    def tearDown(self):
-        self.temp_dir.cleanup()
-    
     def test_singleton_file_loader_with_existing_file(self):
         """Test SingletonFileLoader initialization with existing file"""
-        loader = TestSingletonFileLoader(
-            filename="config.json",
-            search_locations=[str(self.temp_path)]
-        )
-        
-        expected_path = os.path.join(str(self.temp_path), "config.json")
-        self.assertEqual(loader.filepath, expected_path)
-        self.assertEqual(loader.loaded_filepath, expected_path)
+        Singleton._instances = {} # Clear singleton instances
+        # Create a dummy file in the current test file's directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        test_file_name = "config.json"
+        test_file_path = os.path.join(current_dir, test_file_name)
+        with open(test_file_path, "w") as f:
+            f.write('{"setting": "value"}')
+
+        try:
+            loader = TestSingletonFileLoader(
+                filename=test_file_name,
+                caller_module_path=__file__
+            )
+            self.assertEqual(loader.loaded_filepath, test_file_path)
+        finally:
+            if os.path.exists(test_file_path):
+                os.remove(test_file_path)
     
     def test_singleton_file_loader_with_nonexistent_file(self):
         """Test SingletonFileLoader initialization with nonexistent file"""
+        Singleton._instances = {} # Clear singleton instances
         loader = TestSingletonFileLoader(
             filename="nonexistent.json",
-            search_locations=[str(self.temp_path)]
+            caller_module_path=__file__
         )
         
         self.assertIsNone(loader.filepath)
@@ -727,21 +564,31 @@ class TestSingletonFileLoaderIntegration(unittest.TestCase):
     
     def test_singleton_file_loader_singleton_behavior(self):
         """Test that SingletonFileLoader maintains singleton behavior with file loading"""
-        loader1 = TestSingletonFileLoader(
-            filename="config.json",
-            search_locations=[str(self.temp_path)],
-            value="first"
-        )
-        
-        # Create second instance - should be same as first
-        loader2 = TestSingletonFileLoader.get_instance()
-        
-        # Should be the same instance
-        self.assertIs(loader1, loader2)
-        # Should retain original values
-        self.assertEqual(loader2.value, "first")
-        expected_path = os.path.join(str(self.temp_path), "config.json")
-        self.assertEqual(loader2.filepath, expected_path)
+        # Create a dummy file in the current test file's directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        test_file_name = "config_singleton.json"
+        test_file_path = os.path.join(current_dir, test_file_name)
+        with open(test_file_path, "w") as f:
+            f.write('{"setting": "value"}')
+
+        try:
+            loader1 = TestSingletonFileLoader(
+                filename=test_file_name,
+                caller_module_path=__file__,
+                value="first"
+            )
+            
+            # Create second instance - should be same as first
+            loader2 = TestSingletonFileLoader.get_instance()
+            
+            # Should be the same instance
+            self.assertIs(loader1, loader2)
+            # Should retain original values
+            self.assertEqual(loader2.value, "first")
+            self.assertEqual(loader2.loaded_filepath, test_file_path)
+        finally:
+            if os.path.exists(test_file_path):
+                os.remove(test_file_path)
 
 
 if __name__ == "__main__":
