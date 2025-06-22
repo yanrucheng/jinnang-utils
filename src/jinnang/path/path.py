@@ -3,10 +3,13 @@ import platform
 import time
 import pytz
 import os
+import logging
 from datetime import datetime
 from typing import TypeVar
 
 from jinnang.data.hash import partial_file_hash
+from jinnang.verbosity.verbosity import Verbosity
+from typing import TypeVar, Type, Dict, Any, Optional, List, ClassVar
 
 T = TypeVar('T')
 
@@ -28,6 +31,138 @@ def ensure_unique_path(func):
 
         return unique_path
     return wrapper
+
+
+class RelPathSeeker:
+    """
+    A utility class for resolving file paths relative to a calling module.
+
+    This class provides methods to search for a given filename within a set of
+    prioritized locations based on a provided caller module path.
+
+    Example:
+        ```python
+        # Assuming 'my_script.py' is in /project/src/ and 'config.json' is in /project/conf/
+        # and the current working directory is /project/
+
+        # To find 'config.json' relative to 'my_script.py'
+        config_seeker = RelPathSeeker(
+            filename="conf/sample_config.yml",
+            caller_module_path="/project/src/my_script.py"
+        )
+        print(config_seeker.filepath) # Expected: /project/conf/sample_config.yml
+
+        # To find a file in the current working directory
+        readme_seeker = RelPathSeeker(
+            filename="README.md",
+            caller_module_path=__file__ # Or None, if current working directory is sufficient
+        )
+        print(readme_seeker.filepath) # Expected: /project/README.md
+        ```
+    """
+
+    def __init__(
+        self,
+        filename: Optional[str] = None,
+        caller_module_path: Optional[str] = None,
+        verbosity: Verbosity = Verbosity.FULL,
+        **kwargs: Any
+    ):
+        if not (filename or caller_module_path):
+            raise ValueError(
+                "At least one of 'filename' or 'caller_module_path' must be provided."
+            )
+
+        try:
+            self.loaded_filepath = self.resolve_file_path(
+                filename=filename,
+                caller_module_path=caller_module_path,
+                verbosity=verbosity
+            )
+        except FileNotFoundError:
+            self.loaded_filepath = None
+        
+    @property
+    def filepath(self):
+        return self.loaded_filepath
+
+    @staticmethod
+    def _get_search_paths(
+        filename: str = "",
+        caller_module_path: Optional[str] = None,
+        verbosity: Verbosity = Verbosity.FULL
+    ) -> List[str]:
+        """Generates a list of potential file paths based on the caller's module path.
+
+        This static method constructs a prioritized list of absolute file paths
+        where a given filename might be located, relative to the calling module.
+
+        Args:
+            filename (str): The name of the file to search for.
+            caller_module_path (Optional[str]): The `__file__` attribute of the
+                calling module, used to determine a relative search path.
+            verbosity (Verbosity): The verbosity level for logging.
+
+        Returns:
+            List[str]: A list of absolute paths where the file might exist,
+            ordered by search priority.
+        """
+        module_path = caller_module_path or __file__
+        locations = [
+            os.path.dirname(module_path),
+            os.path.join(os.path.dirname(module_path), '..'),
+            os.path.join(os.path.dirname(module_path), '../..'),
+            '.'
+        ]
+        potential_paths = [os.path.join(directory, filename) for directory in locations]
+        if verbosity >= Verbosity.DETAIL:
+            logging.debug(f"Potential search paths for '{filename}': {potential_paths}")
+        return potential_paths
+
+    @staticmethod
+    def resolve_file_path(
+        filename: str = "",
+        caller_module_path: Optional[str] = None,
+        verbosity: Verbosity = Verbosity.FULL
+    ) -> str:
+        """Resolves the absolute path to a file based on the caller's module path.
+
+        This static method attempts to find a file by searching through a series
+        of prioritized locations relative to the calling module.
+
+        Args:
+            filename (str): The name of the file to resolve.
+            caller_module_path (Optional[str]): The `__file__` attribute of the
+                calling module, used to determine a relative search path.
+            verbosity (Verbosity): The verbosity level for logging.
+
+        Returns:
+            str: The absolute path to the resolved file.
+
+        Raises:
+            FileNotFoundError: If the file cannot be found in any of the specified
+                or default search locations.
+        """
+        if verbosity >= Verbosity.DETAIL:
+            logging.debug(f"Searching for filename: {filename}")
+
+        potential_paths = RelPathSeeker._get_search_paths(
+            filename=filename,
+            caller_module_path=caller_module_path,
+            verbosity=verbosity
+        )
+
+        for potential_path in potential_paths:
+
+            if os.path.exists(potential_path) and os.path.isfile(potential_path):
+                if verbosity >= Verbosity.ONCE:
+                    logging.info(f"Found file: {potential_path}")
+                return potential_path
+
+        error_message = f"Could not find {filename} in any of these locations: {potential_paths}"
+        if verbosity >= Verbosity.ONCE:
+            logging.error(error_message)
+        raise FileNotFoundError(error_message)
 
 class MyPath:
 

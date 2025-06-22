@@ -1,13 +1,13 @@
-from jinnang.common.patterns import SingletonFileLoader
+
+from jinnang.path.path import RelPathSeeker
 from jinnang.verbosity import Verbosity
 
 
-
-print("--- SingletonFileLoader Example ---")
+print("--- RelPathSeeker Example ---")
 
 # --- Demonstrate loading a file relative to the caller_module_path ---
 # The loader will search for 'conf/sample_config.yml' relative to this script's location
-config_loader_1 = SingletonFileLoader(
+config_loader_1 = RelPathSeeker(
     filename="conf/sample_config.yml",
     caller_module_path=__file__,
     verbosity=Verbosity.FULL
@@ -23,23 +23,19 @@ else:
     print(f"Failed to load config: conf/sample_config.yml")
 
 # --- Demonstrate Singleton behavior ---
-# Subsequent calls with the same parameters should return the same instance
-config_loader_2 = SingletonFileLoader(
+# Subsequent calls with the same parameters will create a new instance
+config_loader_2 = RelPathSeeker(
     filename="conf/sample_config.yml",
     caller_module_path=__file__,
     verbosity=Verbosity.FULL
 )
 
-print("\n--- Demonstrate Singleton Behavior (Second Attempt) ---")
+print("\n--- Demonstrate New Instance Behavior (Second Attempt) ---")
 print(f"Is config_loader_1 the same instance as config_loader_2? {config_loader_1 is config_loader_2}")
 
 # --- Demonstrate attempting to load a non-existent file relative to caller_module_path ---
 
-
-# Clear the singleton instance cache to ensure a fresh attempt for the non-existent file
-SingletonFileLoader._instances.clear()
-
-loader_non_existent = SingletonFileLoader(
+loader_non_existent = RelPathSeeker(
     filename="conf/non_existent.yml",
     caller_module_path=__file__,
     verbosity=Verbosity.FULL
