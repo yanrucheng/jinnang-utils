@@ -108,33 +108,30 @@ class TestPathUtilities(unittest.TestCase):
         # Test different time periods with fixed timestamps
         # Based on the actual implementation in src/jinnang/path/path.py
         test_cases = [
-            (0, 'Night'),       # 12 AM
-            (1, 'Midnight'),    # 1 AM
-            (4, 'Midnight'),    # 4 AM
-            (5, 'Midnight'),    # 5 AM
-            (6, 'Morning'),     # 6 AM
-            (11, 'Morning'),    # 11 AM
-            (12, 'Morning'),    # 12 PM - bug in implementation, should be Noon
-            (13, 'Noon'),       # 1 PM - bug in implementation, should be Afternoon
-            (16, 'Afternoon'),  # 4 PM
-            (17, 'Afternoon'),  # 5 PM
-            (20, 'Evening'),    # 8 PM
-            (21, 'Evening'),    # 9 PM
-            (22, 'Night'),      # 10 PM
-            (23, 'Night')       # 11 PM
+            (0, 'Midnight'),
+            (4, 'Midnight'),
+            (5, 'Morning'),
+            (11, 'Morning'),
+            (12, 'Noon'),
+            (13, 'Afternoon'),
+            (16, 'Afternoon'),
+            (17, 'Evening'),
+            (20, 'Evening'),
+            (21, 'Night'),
+            (23, 'Night'),
         ]
         
         for hour, expected_period in test_cases:
-            # Create a fresh MyPath instance for each test to avoid cache issues
+            get_file_timestamp.cache_clear()
             fresh_path = MyPath(self.test_file_path)
-            # Create a fixed datetime for testing
-            test_time = datetime(2023, 1, 1, hour, 0, 0, tzinfo=pytz.timezone('Asia/Shanghai'))
+            shanghai_tz = pytz.timezone('Asia/Shanghai')
+            naive_dt = datetime(2023, 1, 1, hour, 0, 0)
+            test_time = shanghai_tz.localize(naive_dt)
             with patch('jinnang.path.path.get_file_timestamp', return_value=test_time.timestamp()):
-                # Clear cache if it exists
-                if hasattr(fresh_path.time_of_a_day, 'cache_clear'):
-                    fresh_path.time_of_a_day.cache_clear()
-                self.assertEqual(fresh_path.time_of_a_day, expected_period, 
-                               f"Hour {hour} should return '{expected_period}' but got '{fresh_path.time_of_a_day}'")
+                MyPath.time_of_a_day.fget.cache_clear()
+                returned_period = fresh_path.time_of_a_day
+                self.assertEqual(returned_period, expected_period, 
+                               f"Hour {hour} should return '{expected_period}' but got '{returned_period}'")
 
     def test_get_file_timestamp(self):
         """Test get_file_timestamp function."""

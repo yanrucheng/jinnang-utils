@@ -215,21 +215,25 @@ class MyPath:
         """
         if self.timestamp is None:
             return None
-        timestamp = datetime.fromtimestamp(self.timestamp, self.timezone)
-        hour = timestamp.hour
 
-        if 5 <= hour < 12:
-            return 'Morning'
-        elif hour == 12:
-            return 'Noon'
-        elif 12 < hour < 17:
-            return 'Afternoon'
-        elif 17 <= hour < 21:
-            return 'Evening'
-        elif 21 <= hour < 24:
-            return 'Night'
-        else:  # from midnight to 5 am
-            return 'Midnight'
+        local_dt = datetime.fromtimestamp(self.timestamp, self.timezone)
+        hour = local_dt.hour
+
+        # Define time periods with explicit start and end hours for clarity.
+        time_periods = [
+            (0, 5, 'Midnight'),
+            (5, 12, 'Morning'),
+            (12, 13, 'Noon'),      # Noon is a special case at exactly 12:00.
+            (13, 17, 'Afternoon'),
+            (17, 21, 'Evening'),
+            (21, 24, 'Night')
+        ]
+
+        for start_hour, end_hour, period in time_periods:
+            if start_hour <= hour < end_hour:
+                return period
+
+        return 'Night'  # Fallback, though all hours 0-23 should be covered.
 
 @functools.lru_cache(maxsize=None)
 def get_file_timestamp(path):
@@ -251,7 +255,7 @@ def get_file_timestamp(path):
     return timestamp
 
 def timestamp_to_date(timestamp, fstr='%y%m%d', timezone='Asia/Shanghai'):
-    utc_dt = datetime.utcfromtimestamp(timestamp)
+    utc_dt = datetime.fromtimestamp(timestamp, datetime.timezone.utc)
     utc_dt = utc_dt.replace(tzinfo=pytz.UTC)
     my_tz = pytz.timezone(timezone)
     my_dt = utc_dt.astimezone(my_tz)
