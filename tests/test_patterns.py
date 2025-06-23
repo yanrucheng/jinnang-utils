@@ -11,10 +11,70 @@ from jinnang.verbosity.verbosity import Verbosity
 
 class TestSingleton(Singleton):
     """Test implementation of Singleton for testing"""
-    def __init__(self, value=None):
-        if not hasattr(self, '_initialized'):
-            self.value = value
-            self._initialized = True
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not hasattr(self, '_initialized_once'):
+            self.value = kwargs.get('value')
+            self._initialized_once = True
+
+
+class TestSingletonPattern(unittest.TestCase):
+    def setUp(self):
+        # Reset all singleton instances before each test
+        Singleton._instances.clear()
+
+    def tearDown(self):
+        # Clean up all singleton instances after each test
+        Singleton._instances.clear()
+
+    def test_initialization_with_parameters(self):
+        """Test that a singleton can be initialized with parameters once."""
+        s1 = TestSingleton(value=10)
+        self.assertEqual(s1.value, 10)
+        # Subsequent calls without params should return the same instance
+        s2 = TestSingleton()
+        self.assertIs(s1, s2)
+        self.assertEqual(s2.value, 10)
+
+    def test_reinitialization_with_parameters_raises_error(self):
+        """Test that initializing with parameters again raises a TypeError."""
+        TestSingleton(value=20)  # First initialization
+        with self.assertRaises(TypeError):
+            TestSingleton(value=30)  # Second initialization
+
+    def test_get_instance_with_parameters_raises_error(self):
+        """Test that get_instance with parameters raises a TypeError."""
+        TestSingleton(value=40)  # Initialize first
+        with self.assertRaises(TypeError):
+            TestSingleton.get_instance(value=50)
+
+    def test_get_instance_returns_same_instance(self):
+        """Test that get_instance returns the correct instance."""
+        s1 = TestSingleton(value=60)
+        s2 = TestSingleton.get_instance()
+        self.assertIs(s1, s2)
+        self.assertEqual(s1.value, 60)
+        self.assertEqual(s2.value, 60)
+
+    def test_different_singleton_classes_are_separate(self):
+        """Test that different Singleton subclasses have different instances."""
+        class AnotherSingleton(Singleton):
+            def __init__(self, name=None):
+                super().__init__(name=name)
+                if not hasattr(self, 'name'):
+                    self.name = name
+
+        s1 = TestSingleton(value=100)
+        s2 = AnotherSingleton(name="test")
+
+        self.assertIsNot(s1, s2)
+        self.assertEqual(s1.value, 100)
+        self.assertEqual(s2.name, "test")
+
+        s3 = TestSingleton.get_instance()
+        s4 = AnotherSingleton.get_instance()
+        self.assertIs(s1, s3)
+        self.assertIs(s2, s4)
 
 
 

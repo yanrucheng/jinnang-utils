@@ -1,38 +1,46 @@
 from jinnang.common.patterns import Singleton
 
-print("--- Minimal Singleton Example ---")
-
 class MySingleton(Singleton):
+    """
+    An example of a Singleton class.
+    The `__init__` method needs to be idempotent because it's called
+    every time `MySingleton()` is invoked.
+    """
     def __init__(self, value=None):
-        # The __init__ method is called every time, but we only initialize once.
-        if not hasattr(self, '_initialized'):
-            print(f"Initializing MySingleton with value: {value}")
+        # Pass arguments to the parent class to enable re-initialization checks.
+        super().__init__(value=value)
+        
+        # The hasattr check ensures that the instance's state is set only once.
+        # Without this, `s2 = MySingleton()` would reset `self.value` to `None`.
+        if not hasattr(self, '_initialized_once'):
             self.value = value
-            self._initialized = True
+            self._initialized_once = True
 
-# 1. First instantiation with a parameter. This is the correct way to initialize.
-print("\n1. Initializing singleton instance:")
-s1 = MySingleton(value="Initial Value")
-print(f"s1.value: {s1.value}")
+# --- Correct Usage ---
+# 1. First call initializes the singleton instance with a value.
+print("Initializing singleton...")
+s1 = MySingleton(value="Hello, Singleton!")
+print(f"Instance 1 value: {s1.value}")
 
-# 2. Get the existing instance using get_instance(). No parameters are allowed.
-print("\n2. Retrieving existing instance:")
+# 2. Subsequent calls return the same instance without re-initializing.
+print("\nRetrieving existing singleton...")
 s2 = MySingleton.get_instance()
-print(f"s2.value: {s2.value}")
-print(f"s1 is s2: {s1 is s2}")
+print(f"Instance 2 value: {s2.value}")
+assert s1 is s2, "s1 and s2 should be the same instance"
+print("s1 and s2 are the same instance.")
 
-# 3. Attempting to re-initialize with a new parameter will raise a TypeError.
-print("\n3. Attempting to re-initialize with new parameters (will raise TypeError):")
+
+# --- Incorrect Usage (will raise TypeError) ---
+# 1. Attempting to re-initialize with new parameters is not allowed.
+print("\nAttempting to re-initialize with new parameters...")
 try:
     MySingleton(value="New Value")
 except TypeError as e:
     print(f"Caught expected error: {e}")
 
-# 4. Attempting to call get_instance() with parameters will also raise a TypeError.
-print("\n4. Attempting to get_instance() with parameters (will raise TypeError):")
+# 2. Calling get_instance() with parameters is not allowed.
+print("\nAttempting to call get_instance() with parameters...")
 try:
     MySingleton.get_instance(value="Another Value")
 except TypeError as e:
     print(f"Caught expected error: {e}")
-
-print("\n--- Example Finished ---")

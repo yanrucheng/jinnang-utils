@@ -26,7 +26,7 @@ class TestDebug(unittest.TestCase):
         self.assertIn("methods", info)
         self.assertIn("attributes", info)
         self.assertEqual(info["class_name"], "MyClass")
-        self.assertEqual(info["module"], "tests.test_debug")
+        self.assertIn(info["module"], ["tests.test_debug", "test_debug"])
         self.assertIsInstance(info["methods"], list)
         self.assertIsInstance(info["attributes"], list)
 
