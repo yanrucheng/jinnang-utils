@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jinnang"
-version = "0.1.0"
+version = "0.2.0"
 description = "A collection of utility functions."
 readme = "README.md"
 requires-python = ">=3.6"
