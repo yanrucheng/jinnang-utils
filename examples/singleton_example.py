@@ -1,51 +1,38 @@
 from jinnang.common.patterns import Singleton
 
-print("--- Singleton Example ---")
+print("--- Minimal Singleton Example ---")
 
-# --- Example 1: Singleton with keyword arguments ---
-
-print("\n--- Demonstrate Singleton with keyword arguments ---")
-
-class ConfigManager(Singleton):
-    def __init__(self, config=None):
+class MySingleton(Singleton):
+    def __init__(self, value=None):
+        # The __init__ method is called every time, but we only initialize once.
         if not hasattr(self, '_initialized'):
-            print(f"ConfigManager initialized with config: {config}")
-            self.config = config or {}
+            print(f"Initializing MySingleton with value: {value}")
+            self.value = value
             self._initialized = True
 
-# First call with keyword argument using __init__
-config_manager1 = ConfigManager(config={'db': 'mysql'})
-print(f"ConfigManager1 config: {config_manager1.config}")
+# 1. First instantiation with a parameter. This is the correct way to initialize.
+print("\n1. Initializing singleton instance:")
+s1 = MySingleton(value="Initial Value")
+print(f"s1.value: {s1.value}")
 
-# Second call using get_instance returns the same instance
-config_manager2 = ConfigManager.get_instance()
-print(f"ConfigManager2 config: {config_manager2.config}")
+# 2. Get the existing instance using get_instance(). No parameters are allowed.
+print("\n2. Retrieving existing instance:")
+s2 = MySingleton.get_instance()
+print(f"s2.value: {s2.value}")
+print(f"s1 is s2: {s1 is s2}")
 
-print(f"Is config_manager1 the same instance as config_manager2? {config_manager1 is config_manager2}")
+# 3. Attempting to re-initialize with a new parameter will raise a TypeError.
+print("\n3. Attempting to re-initialize with new parameters (will raise TypeError):")
+try:
+    MySingleton(value="New Value")
+except TypeError as e:
+    print(f"Caught expected error: {e}")
 
-# --- Example 2: Singleton with positional arguments ---
-
-print("\n--- Demonstrate Singleton with positional arguments ---")
-
-class DatabaseManager(Singleton):
-    def __init__(self, db_name='default'):
-        if not hasattr(self, '_initialized'):
-            print(f"DatabaseManager initialized with db_name: {db_name}")
-            self.db_name = db_name
-            self._initialized = True
-
-# First call with positional argument using get_instance
-db_manager1 = DatabaseManager.get_instance('production_db')
-print(f"DatabaseManager1 db_name: {db_manager1.db_name}")
-
-# Second call using __init__ returns the same instance
-db_manager2 = DatabaseManager()
-print(f"DatabaseManager2 db_name: {db_manager2.db_name}")
-
-print(f"Is db_manager1 the same instance as db_manager2? {db_manager1 is db_manager2}")
-
-# --- Different Singleton classes have different instances ---
-print("\n--- Demonstrate different Singleton classes have different instances ---")
-print(f"Is config_manager1 the same instance as db_manager1? {config_manager1 is db_manager1}")
+# 4. Attempting to call get_instance() with parameters will also raise a TypeError.
+print("\n4. Attempting to get_instance() with parameters (will raise TypeError):")
+try:
+    MySingleton.get_instance(value="Another Value")
+except TypeError as e:
+    print(f"Caught expected error: {e}")
 
 print("\n--- Example Finished ---")

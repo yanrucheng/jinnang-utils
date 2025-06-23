@@ -41,10 +41,41 @@ class Singleton:
 
     def __new__(cls: Type[T], *args: Any, **kwargs: Any) -> T:
         if cls not in cls._instances:
-            cls._instances[cls] = super().__new__(cls)
+            instance = super().__new__(cls)
+            cls._instances[cls] = instance
+            # Flag to check if __init__ has been called with params
+            instance._initialized_with_params = (len(args) > 0 or len(kwargs) > 0)
         return cls._instances[cls]
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        # The real initialization should be done in a separate method
+        # to avoid being called multiple times.
+        # This __init__ is to check for re-initialization with different params.
+        if hasattr(self, '_initialized_with_params') and self._initialized_with_params:
+            if args or kwargs:
+                raise TypeError(
+                    "Singleton already initialized with parameters. To prevent accidental reconfiguration, "
+                    "re-initialization with new parameters is not allowed.\n"
+                    "Example:\n"
+                    "  s1 = MySingleton(value='foo')  # OK\n"
+                    "  s2 = MySingleton(value='bar')  # Raises TypeError\n"
+                    "Use MySingleton.get_instance() to retrieve the existing instance."
+                )
 
     @classmethod
     def get_instance(cls: Type[T], *args: Any, **kwargs: Any) -> T:
-        """Get or create the singleton instance"""
-        return cls(*args, **kwargs)
+        """Get the singleton instance. Parameters are not allowed.
+
+        Raises:
+            TypeError: If any arguments are passed.
+        """
+        if args or kwargs:
+            raise TypeError(
+                "get_instance() does not accept any arguments. Use the constructor for initial configuration.\n"
+                "Example of incorrect usage:\n"
+                "  s1 = MySingleton.get_instance(value='foo')  # Raises TypeError\n"
+                "Correct usage:\n"
+                "  s1 = MySingleton(value='foo')             # OK\n"
+                "  s2 = MySingleton.get_instance()          # OK"
+            )
+        return cls()
