@@ -1,7 +1,7 @@
 import unittest
 import tempfile
 import os
-from jinnang.data.hash import stable_hash, md5, partial_file_hash
+from jinnang.common.hash import stable_hash, md5, partial_file_hash
 
 
 class TestHashFunctions(unittest.TestCase):

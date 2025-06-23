@@ -20,7 +20,7 @@ from jinnang.arithmetic import get_mode
 from jinnang.io.system import suppress_stdout_stderr, get_worker_num_for_io_bounded_task, safe_delete, safe_move, copy_with_meta
 
 # Data utilities
-from jinnang.data.geo_utils import calculate_distance_meters
+from jinnang.geo import calculate_distance_meters
 
 # Common utilities
 from jinnang.common.decorators import mock_when, fail_recover, custom_retry

@@ -23,16 +23,15 @@ src/
     ├── arithmetic/           # Arithmetic and numerical utilities
     │   ├── __init__.py
     │   └── arithmetic.py
-    ├── common/               # Generic, cross-cutting utilities (decorators, patterns, collections, exceptions)
+    ├── common/               # Generic, cross-cutting utilities (decorators, patterns, collections, exceptions, hashing)
     │   ├── __init__.py
     │   ├── collections.py
     │   ├── decorators.py
     │   ├── exceptions.py     # Custom exception classes
-    │   └── patterns.py
-    ├── data/                 # Data manipulation, hashing, geo-utilities
-    │   ├── __init__.py
     │   ├── hash.py
-    │   └── geo_utils.py
+    │   └── patterns.py
+    ├── geo/                  # Geographical data utilities
+    │   └── __init__.py
     ├── date/                 # Date and time utilities
     │   ├── __init__.py
     │   └── date.py
@@ -60,8 +59,8 @@ src/
 
 -   **AI Tools**: Utilities for Large Language Models and other AI-related tasks.
 -   **Arithmetic Utilities**: Essential arithmetic and numerical functions.
--   **Common Helpers**: Reusable components like decorators, design patterns, and collections.
--   **Data Handling**: Utilities for hashing, geographical data, and general data manipulation.
+-   **Common Helpers**: Reusable components like decorators, design patterns, collections, and hashing.
+-   **Geographical Utilities**: Tools for geographical data calculations.
 -   **Date Utilities**: Tools for handling date and time operations.
 -   **Debugging**: Helpers for inspecting Python execution and class information.
 -   **I/O Operations**: Tools for file system interactions and system-level utilities.
@@ -81,7 +80,7 @@ pip install jinnang-utils
 ### Data Handling
 
 ```python
-from jinnang.data import hash
+from jinnang.common import hash
 
 # Create a stable hash for any object
 hash_value = hash.stable_hash({"key": "value"})

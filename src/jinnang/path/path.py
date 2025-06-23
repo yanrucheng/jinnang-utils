@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 from typing import TypeVar
 
-from jinnang.data.hash import partial_file_hash
+from jinnang.common.hash import partial_file_hash
 from jinnang.verbosity.verbosity import Verbosity
 from typing import TypeVar, Type, Dict, Any, Optional, List, ClassVar
 

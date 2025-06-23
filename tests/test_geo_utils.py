@@ -1,6 +1,6 @@
 import unittest
 import math
-from jinnang.data.geo_utils import calculate_distance_meters
+from jinnang.geo import calculate_distance_meters
 
 class TestGeoUtils(unittest.TestCase):
 
