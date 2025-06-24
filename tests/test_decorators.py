@@ -4,6 +4,7 @@ import time
 from unittest.mock import patch, MagicMock
 from jinnang.common.decorators import mock_when, fail_recover, custom_retry
 from jinnang.common.exceptions import BadInputException
+from jinnang.verbosity.verbosity import Verbosity
 import json
 
 class TestDecorators(unittest.TestCase):
@@ -35,23 +36,23 @@ class TestDecorators(unittest.TestCase):
         def mock_result_func_raises():
             raise ValueError("Mock error")
 
-        @mock_when(mock_condition, mock_result_func_raises)
+        @mock_when(mock_condition, mock_result_func_raises, verbosity=Verbosity.ONCE)
         def original_function():
             return "original_value"
 
         self.assertEqual(original_function(), "original_value")
 
     def test_mock_when_mock_result_raises_exception_logging(self):
-        # Test case to ensure the warning log is triggered when mock_result raises an exception
+        # Test case to ensure the info log is triggered when mock_result raises an exception
         mock_condition = lambda: True
         def mock_result_func_raises():
             raise ValueError("Mock error")
 
-        @mock_when(mock_condition, mock_result_func_raises)
+        @mock_when(mock_condition, mock_result_func_raises, verbosity=Verbosity.ONCE)
         def original_function():
             return "original_value"
 
-        with self.assertLogs('jinnang.common.decorators', level='WARNING') as cm:
+        with self.assertLogs('jinnang.common.decorators', level='INFO') as cm:
             original_function()
             self.assertIn('Cannot find result for', cm.output[0])
 

@@ -8,14 +8,19 @@ import time
 import functools
 import json
 import traceback
-from typing import Callable, Any, Optional, Type, Union, Tuple
+from typing import Callable, Any, Type, Union, Tuple
 import logging
+from ..verbosity.verbosity import Verbosity
 from .exceptions import BadInputException
+from ..string import truncate
 
 logger = logging.getLogger(__name__)
 
 
-def mock_when(condition: Callable[..., bool], mock_result: Callable[..., Any]):
+def mock_when(condition: Callable[..., bool],
+              mock_result: Callable[..., Any],
+              verbosity: Verbosity = Verbosity.SILENT,
+              max_output_length: int = 100):
     """
     Decorator that returns mock result when condition is True,
     otherwise calls the original function.
@@ -26,6 +31,8 @@ def mock_when(condition: Callable[..., bool], mock_result: Callable[..., Any]):
     Args:
         condition: Callable that returns boolean to determine if mock should be used
         mock_result: The value to return when condition is True
+        verbosity: Verbosity level. Defaults to Verbosity.SILENT.
+        max_output_length: Maximum length of logged output values. Defaults to 100.
         
     Returns:
         The decorated function
@@ -44,10 +51,17 @@ def mock_when(condition: Callable[..., bool], mock_result: Callable[..., Any]):
             if condition():
                 try:
                     res = mock_result(*args, **kwargs) if callable(mock_result) else mock_result
-                    logger.info(f'Matching key={args} & {kwargs}. we got res={res}')
+                    if verbosity > Verbosity.SILENT:
+                        args_truncated = truncate(json.dumps(args), max_output_length)
+                        kwargs_truncated = truncate(json.dumps(kwargs), max_output_length)
+                        res_truncated = truncate(json.dumps(res), max_output_length)
+                        logger.info(f'Matching key={args_truncated} & {kwargs_truncated}. we got res={res_truncated}')
                     return res
-                except:
-                    logger.warning(f'Cannot find result for {args} and {kwargs}. Fallable back to normal function calling.')
+                except Exception:
+                    if verbosity > Verbosity.SILENT:
+                        args_truncated = truncate(json.dumps(args), max_output_length)
+                        kwargs_truncated = truncate(json.dumps(kwargs), max_output_length)
+                        logger.info(f'Cannot find result for {args_truncated} and {kwargs_truncated}. Fallable back to normal function calling.')
             return func(*args, **kwargs)
         return wrapper
     return decorator

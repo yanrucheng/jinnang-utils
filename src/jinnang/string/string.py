@@ -44,3 +44,8 @@ def remove_special_chars(text: str) -> str:
         char for char in text 
         if unicodedata.category(char) not in {'So', 'Cn', 'Co'}
     )
+
+
+def truncate(s: str, max_length: int) -> str:
+    """Truncate a string if it exceeds the specified maximum length."""
+    return s[:max_length] + '...' if len(s) > max_length else s
