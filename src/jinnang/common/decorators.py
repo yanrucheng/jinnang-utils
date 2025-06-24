@@ -24,19 +24,19 @@ def mock_when(condition: Callable[..., bool],
     """
     Decorator that returns mock result when condition is True,
     otherwise calls the original function.
-    
+
     This is useful for testing and development environments where
     you want to bypass actual function execution under certain conditions.
-    
+
     Args:
         condition: Callable that returns boolean to determine if mock should be used
         mock_result: The value to return when condition is True
         verbosity: Verbosity level. Defaults to Verbosity.SILENT.
         max_output_length: Maximum length of logged output values. Defaults to 100.
-        
+
     Returns:
         The decorated function
-        
+
     Example:
         ```python
         @mock_when(lambda: os.getenv('ENV') == 'test', lambda: {'test': 'data'})
@@ -48,20 +48,26 @@ def mock_when(condition: Callable[..., bool],
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs) -> Any:
+            def _log_info(msg_template, res=None):
+                if verbosity <= Verbosity.SILENT:
+                    return
+
+                args_truncated = truncate(json.dumps(args, ensure_ascii=False), max_output_length)
+                kwargs_truncated = truncate(json.dumps(kwargs, ensure_ascii=False), max_output_length)
+
+                format_args = {"args": args_truncated, "kwargs": kwargs_truncated}
+                if res is not None:
+                    format_args["res"] = truncate(json.dumps(res, ensure_ascii=False), max_output_length)
+
+                logger.info(msg_template.format(**format_args))
+
             if condition():
                 try:
                     res = mock_result(*args, **kwargs) if callable(mock_result) else mock_result
-                    if verbosity > Verbosity.SILENT:
-                        args_truncated = truncate(json.dumps(args), max_output_length)
-                        kwargs_truncated = truncate(json.dumps(kwargs), max_output_length)
-                        res_truncated = truncate(json.dumps(res), max_output_length)
-                        logger.info(f'Matching key={args_truncated} & {kwargs_truncated}. we got res={res_truncated}')
+                    _log_info('Matching key={args} & {kwargs}. we got res={res}', res)
                     return res
                 except Exception:
-                    if verbosity > Verbosity.SILENT:
-                        args_truncated = truncate(json.dumps(args), max_output_length)
-                        kwargs_truncated = truncate(json.dumps(kwargs), max_output_length)
-                        logger.info(f'Cannot find result for {args_truncated} and {kwargs_truncated}. Fallable back to normal function calling.')
+                    _log_info('Cannot find result for {args} and {kwargs}. Fallable back to normal function calling.')
             return func(*args, **kwargs)
         return wrapper
     return decorator
@@ -70,16 +76,16 @@ def mock_when(condition: Callable[..., bool],
 def fail_recover(func):
     """
     Decorator that catches exceptions and returns a standardized error response.
-    
+
     This is particularly useful for API handlers where you want to ensure
     a consistent error response format even when exceptions occur.
-    
+
     Args:
         func: The function to decorate
-        
+
     Returns:
         A wrapped function that catches exceptions and returns formatted error responses
-        
+
     Example:
         ```python
         @fail_recover
@@ -88,6 +94,13 @@ def fail_recover(func):
             return result
         ```
     """
+    def _create_error_body(code, msg):
+        return json.dumps({
+            "code": code,
+            "data": {},
+            "msg": msg,
+        }, ensure_ascii=False)
+
     @functools.wraps(func)
     def wrapped(*args, **kw):
         try:
@@ -95,22 +108,14 @@ def fail_recover(func):
         except (json.JSONDecodeError, BadInputException) as e:
             return {
                 'statusCode': 400,
-                'body': json.dumps({
-                    "code": 400,
-                    "data": {},
-                    "msg": str(e),
-                }, ensure_ascii=False)
+                'body': _create_error_body(400, str(e))
             }
         except Exception as e:
             logger.error(traceback.format_exc())
             return {
                 'statusCode': 500,
                 'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps({
-                    'code': 500,
-                    'data': {},
-                    'msg': str(e)
-                }, ensure_ascii=False)
+                'body': _create_error_body(500, str(e))
             }
     return wrapped
 
