@@ -39,6 +39,7 @@ coverage.xml
 docs/_build/
 
 # Environments
+.envrc
 .env
 .venv
 env/
