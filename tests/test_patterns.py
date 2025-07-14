@@ -9,8 +9,8 @@ from jinnang.path.path import RelPathSeeker
 from jinnang.verbosity.verbosity import Verbosity
 
 
-class TestSingleton(Singleton):
-    """Test implementation of Singleton for testing"""
+class MockSingleton(Singleton):
+    """Mock implementation of Singleton for testing"""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not hasattr(self, '_initialized_once'):
@@ -29,29 +29,29 @@ class TestSingletonPattern(unittest.TestCase):
 
     def test_initialization_with_parameters(self):
         """Test that a singleton can be initialized with parameters once."""
-        s1 = TestSingleton(value=10)
+        s1 = MockSingleton(value=10)
         self.assertEqual(s1.value, 10)
         # Subsequent calls without params should return the same instance
-        s2 = TestSingleton()
+        s2 = MockSingleton()
         self.assertIs(s1, s2)
         self.assertEqual(s2.value, 10)
 
     def test_reinitialization_with_parameters_raises_error(self):
         """Test that initializing with parameters again raises a TypeError."""
-        TestSingleton(value=20)  # First initialization
+        MockSingleton(value=20)  # First initialization
         with self.assertRaises(TypeError):
-            TestSingleton(value=30)  # Second initialization
+            MockSingleton(value=30)  # Second initialization
 
     def test_get_instance_with_parameters_raises_error(self):
         """Test that get_instance with parameters raises a TypeError."""
-        TestSingleton(value=40)  # Initialize first
+        MockSingleton(value=40)  # Initialize first
         with self.assertRaises(TypeError):
-            TestSingleton.get_instance(value=50)
+            MockSingleton.get_instance(value=50)
 
     def test_get_instance_returns_same_instance(self):
         """Test that get_instance returns the correct instance."""
-        s1 = TestSingleton(value=60)
-        s2 = TestSingleton.get_instance()
+        s1 = MockSingleton(value=60)
+        s2 = MockSingleton.get_instance()
         self.assertIs(s1, s2)
         self.assertEqual(s1.value, 60)
         self.assertEqual(s2.value, 60)
@@ -64,14 +64,14 @@ class TestSingletonPattern(unittest.TestCase):
                 if not hasattr(self, 'name'):
                     self.name = name
 
-        s1 = TestSingleton(value=100)
+        s1 = MockSingleton(value=100)
         s2 = AnotherSingleton(name="test")
 
         self.assertIsNot(s1, s2)
         self.assertEqual(s1.value, 100)
         self.assertEqual(s2.name, "test")
 
-        s3 = TestSingleton.get_instance()
+        s3 = MockSingleton.get_instance()
         s4 = AnotherSingleton.get_instance()
         self.assertIs(s1, s3)
         self.assertIs(s2, s4)
