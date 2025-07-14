@@ -388,7 +388,7 @@ class TestSuppressIntegration(unittest.TestCase):
     
     def test_with_global_lock_integration(self):
         """Test that suppression works correctly with global locks."""
-        from src.concurrency.global_lock import global_lock
+        from jinnang.concurrency.global_lock import global_lock
         
         results = []
         

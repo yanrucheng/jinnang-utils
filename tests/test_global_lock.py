@@ -19,7 +19,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from unittest.mock import patch, MagicMock
 
-from src.concurrency.global_lock import (
+from jinnang.concurrency.global_lock import (
     UnifiedLock,
     GlobalLockManager,
     with_global_lock,

@@ -10,7 +10,7 @@ from pathlib import Path
 import logging
 logger = logging.getLogger(__name__)
 
-from concurrency.global_lock import global_lock
+from jinnang.concurrency.global_lock import global_lock
 
 PathType = Union[str, Path]
 

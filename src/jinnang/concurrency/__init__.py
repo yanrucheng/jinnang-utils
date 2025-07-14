@@ -6,8 +6,8 @@ concurrent operations across the application.
 """
 
 # For explicit imports, use:
-# from concurrency.global_lock import global_lock, global_alock, with_global_lock
-# from concurrency.global_lock import GlobalLockManager, global_lock_manager
+# from jinnang.concurrency.global_lock import global_lock, global_alock, with_global_lock
+# from jinnang.concurrency.global_lock import GlobalLockManager, global_lock_manager
 
 from .global_lock import (
     global_lock,
