@@ -78,6 +78,43 @@ class TestUnifiedLock(unittest.TestCase):
         
         asyncio.run(run_test())
     
+    def test_decorator_with_mixed_args_and_kwargs(self):
+        """Test that decorator works with functions using both args and kwargs."""
+        @with_global_lock("mixed_args_test")
+        def func_with_mixed_params(key, timeout, data, optional=None):
+            """Function with both positional and keyword arguments."""
+            return {
+                "key": key, 
+                "timeout": timeout, 
+                "data": data, 
+                "optional": optional
+            }
+        
+        # Test with keyword arguments
+        result = func_with_mixed_params(
+            "test_key", 
+            30, 
+            "test_data", 
+            optional="extra_value"
+        )
+        expected = {
+            "key": "test_key", 
+            "timeout": 30, 
+            "data": "test_data", 
+            "optional": "extra_value"
+        }
+        self.assertEqual(result, expected)
+        
+        # Test with positional arguments only
+        result2 = func_with_mixed_params("key2", 45, "data2")
+        expected2 = {
+            "key": "key2", 
+            "timeout": 45, 
+            "data": "data2", 
+            "optional": None
+        }
+        self.assertEqual(result2, expected2)
+    
     def test_async_acquire_release(self):
         """Test explicit async acquire/release methods."""
         async def run_test():
@@ -125,7 +162,11 @@ class TestGlobalLockManager(unittest.TestCase):
         def test_func(x, y):
             return x + y
         
-        result = self.manager.execute_sync("test_key", test_func, 2, 3)
+        result = self.manager.execute_sync(
+            lock_key="test_key", 
+            func=test_func, 
+            func_args=(2, 3)
+        )
         self.assertEqual(result, 5)
     
     def test_async_context_manager(self):
@@ -144,7 +185,11 @@ class TestGlobalLockManager(unittest.TestCase):
                 await asyncio.sleep(0.01)
                 return x * y
             
-            result = await self.manager.execute_async("test_key", test_func, 3, 4)
+            result = await self.manager.execute_async(
+                lock_key="test_key", 
+                func=test_func, 
+                func_args=(3, 4)
+            )
             self.assertEqual(result, 12)
         
         asyncio.run(run_test())
@@ -251,6 +296,92 @@ class TestDecorators(unittest.TestCase):
         
         self.assertEqual(test_func.__name__, "test_func")
         self.assertEqual(test_func.__doc__, "Test function docstring.")
+    
+    def test_decorator_with_key_parameter(self):
+        """Test that decorator works with functions that have 'key' parameter."""
+        @with_global_lock("key_param_test")
+        def func_with_key_param(key, value):
+            """Function that has a 'key' parameter."""
+            return f"{key}:{value}"
+        
+        # This should not raise "multiple values for argument 'key'" error
+        result = func_with_key_param("test_key", "test_value")
+        self.assertEqual(result, "test_key:test_value")
+    
+    def test_decorator_with_timeout_parameter(self):
+        """Test that decorator works with functions that have 'timeout' parameter."""
+        @with_global_lock("timeout_param_test")
+        def func_with_timeout_param(timeout, operation):
+            """Function that has a 'timeout' parameter."""
+            return f"timeout={timeout}, operation={operation}"
+        
+        # This should not raise "multiple values for argument 'timeout'" error
+        result = func_with_timeout_param(30, "database_query")
+        self.assertEqual(result, "timeout=30, operation=database_query")
+    
+    def test_decorator_with_both_key_and_timeout_parameters(self):
+        """Test that decorator works with functions that have both 'key' and 'timeout' parameters."""
+        @with_global_lock("both_params_test")
+        def func_with_both_params(key, timeout, data):
+            """Function that has both 'key' and 'timeout' parameters."""
+            return {"key": key, "timeout": timeout, "data": data}
+        
+        # This should not raise any parameter conflict errors
+        result = func_with_both_params("cache_key", 60, "some_data")
+        expected = {"key": "cache_key", "timeout": 60, "data": "some_data"}
+        self.assertEqual(result, expected)
+    
+    def test_async_decorator_with_key_parameter(self):
+        """Test that async decorator works with functions that have 'key' parameter."""
+        async def run_test():
+            @with_global_lock("async_key_param_test")
+            async def async_func_with_key_param(key, value):
+                """Async function that has a 'key' parameter."""
+                await asyncio.sleep(0.001)  # Small delay
+                return f"async_{key}:{value}"
+            
+            # This should not raise "multiple values for argument 'key'" error
+            result = await async_func_with_key_param("async_test_key", "async_test_value")
+            self.assertEqual(result, "async_async_test_key:async_test_value")
+        
+        asyncio.run(run_test())
+    
+    def test_async_decorator_with_timeout_parameter(self):
+        """Test that async decorator works with functions that have 'timeout' parameter."""
+        async def run_test():
+            @with_global_lock("async_timeout_param_test")
+            async def async_func_with_timeout_param(timeout, operation):
+                """Async function that has a 'timeout' parameter."""
+                await asyncio.sleep(0.001)  # Small delay
+                return f"async_timeout={timeout}, operation={operation}"
+            
+            # This should not raise "multiple values for argument 'timeout'" error
+            result = await async_func_with_timeout_param(45, "async_database_query")
+            self.assertEqual(result, "async_timeout=45, operation=async_database_query")
+        
+        asyncio.run(run_test())
+    
+    def test_decorator_with_mixed_args_and_kwargs(self):
+        """Test that decorator works with functions using both positional and keyword arguments."""
+        @with_global_lock("mixed_args_test")
+        def func_with_mixed_params(key, timeout, *args, **kwargs):
+            """Function that has both 'key' and 'timeout' parameters plus varargs."""
+            return {
+                "key": key,
+                "timeout": timeout,
+                "args": args,
+                "kwargs": kwargs
+            }
+        
+        # Test with both positional and keyword arguments
+        result = func_with_mixed_params("test_key", 30, "extra_arg", data="test_data")
+        expected = {
+            "key": "test_key",
+            "timeout": 30,
+            "args": ("extra_arg",),
+            "kwargs": {"data": "test_data"}
+        }
+        self.assertEqual(result, expected)
 
 
 class TestContextManagers(unittest.TestCase):

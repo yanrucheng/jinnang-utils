@@ -149,51 +149,55 @@ class GlobalLockManager:
     
     def execute_sync(
         self,
-        key: str,
+        lock_key: str,
         func: Callable[..., T],
-        *args,
-        timeout: Optional[float] = None,
-        **kwargs
+        func_args: tuple = (),
+        func_kwargs: Optional[dict] = None,
+        lock_timeout: Optional[float] = None,
     ) -> T:
         """
         Execute a synchronous function with lock protection.
         
         Args:
-            key: Unique identifier for the resource being protected
+            lock_key: Unique identifier for the resource being protected
             func: The function to execute
-            *args: Positional arguments for the function
-            timeout: Lock acquisition timeout in seconds
-            **kwargs: Keyword arguments for the function
+            func_args: Positional arguments for the function
+            func_kwargs: Keyword arguments for the function
+            lock_timeout: Lock acquisition timeout in seconds
             
         Returns:
             The result of the function
         """
-        with self.lock(key, timeout=timeout):
-            return func(*args, **kwargs)
+        if func_kwargs is None:
+            func_kwargs = {}
+        with self.lock(lock_key, timeout=lock_timeout):
+            return func(*func_args, **func_kwargs)
     
     async def execute_async(
         self,
-        key: str,
+        lock_key: str,
         func: Callable[..., T],
-        *args,
-        timeout: Optional[float] = None,
-        **kwargs
+        func_args: tuple = (),
+        func_kwargs: Optional[dict] = None,
+        lock_timeout: Optional[float] = None,
     ) -> T:
         """
         Execute an asynchronous function with lock protection.
         
         Args:
-            key: Unique identifier for the resource being protected
+            lock_key: Unique identifier for the resource being protected
             func: The async function to execute
-            *args: Positional arguments for the function
-            timeout: Lock acquisition timeout in seconds
-            **kwargs: Keyword arguments for the function
+            func_args: Positional arguments for the function
+            func_kwargs: Keyword arguments for the function
+            lock_timeout: Lock acquisition timeout in seconds
             
         Returns:
             The result of the function
         """
-        async with self.alock(key, timeout=timeout):
-            return await func(*args, **kwargs)
+        if func_kwargs is None:
+            func_kwargs = {}
+        async with self.alock(lock_key, timeout=lock_timeout):
+            return await func(*func_args, **func_kwargs)
 
     def get_lock(self, key: str) -> UnifiedLock:
         """Get the lock object for a specific key (for advanced usage)."""
@@ -261,22 +265,22 @@ def with_global_lock(
             @wraps(target_func)
             async def async_wrapper(*args, **kwargs) -> T:
                 return await global_lock_manager.execute_async(
-                    key=key,
+                    lock_key=key,
                     func=target_func,
-                    *args,
-                    timeout=timeout,
-                    **kwargs
+                    func_args=args,
+                    func_kwargs=kwargs,
+                    lock_timeout=timeout
                 )
             return async_wrapper
         else:
             @wraps(target_func)
             def sync_wrapper(*args, **kwargs) -> T:
                 return global_lock_manager.execute_sync(
-                    key=key,
+                    lock_key=key,
                     func=target_func,
-                    *args,
-                    timeout=timeout,
-                    **kwargs
+                    func_args=args,
+                    func_kwargs=kwargs,
+                    lock_timeout=timeout
                 )
             return sync_wrapper
     
